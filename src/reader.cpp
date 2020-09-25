@@ -1,7 +1,4 @@
 #include "reader.hpp"
-#include "opencv2/opencv.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/videoio.hpp"
 
 #define WINDOW_NAME "images"
 
@@ -37,6 +34,7 @@ VideoCapture readVideo(std::string fileName)
 /**
  * gets the next available frame from a VC
  */
+
 Mat getFrame(VideoCapture video)
 {
    Mat m;
