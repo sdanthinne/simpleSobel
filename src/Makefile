@@ -1,7 +1,7 @@
 TARGET   = runMe
 CC       = g++
 CCFLAGS  =  -Wall -O0 
-LDFLAGS  = -lm `pkg-config --cflags --lib opencv`
+LDFLAGS  = -lm `pkg-config --cflags --libs opencv`
 SOURCES  = $(wildcard *.cpp)
 INCLUDES = $(wildcard *.hpp)
 OBJECTS  = $(SOURCES:.c=.o)
