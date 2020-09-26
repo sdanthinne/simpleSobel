@@ -5,7 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio.hpp>
 #include <string.h>
-void displayImage(cv::Mat m);
+void displayFrame(cv::VideoCapture video);
 void createDisplayFrame();
 cv::Mat readImage(std::string fileName);
 cv::VideoCapture readVideo(std::string fileName);

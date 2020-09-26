@@ -1,15 +1,32 @@
 #include "reader.hpp"
-
+#include "processor.hpp"
 #define WINDOW_NAME "images"
 
 using namespace std;
 using namespace cv;
-void displayImage(Mat m)
+
+Mat getFrame(VideoCapture v);
+
+void displayFrame(VideoCapture v)
 {
-   namedWindow(WINDOW_NAME, WINDOW_NORMAL);
-   imshow(WINDOW_NAME,m);
-   resizeWindow(WINDOW_NAME,600,600);
-   waitKey(0);
+    int key=0;
+    Mat currFrame = getFrame(v);
+    namedWindow(WINDOW_NAME, WINDOW_NORMAL);
+    while(key!='q')
+    {
+        imshow(WINDOW_NAME,currFrame);
+        resizeWindow(WINDOW_NAME,600,600);
+
+        if((key=waitKey(0))=='q')
+        {
+            //quit
+            destroyAllWindows();
+            break;
+        }else if(key=='n'){
+            //go to the next frame
+            currFrame = grayscaleFrame(getFrame(v));
+        }
+    }
 }
 
 Mat readImage(std::string fileName)

@@ -6,6 +6,9 @@ using namespace std;
 int main(int argc, char** argv)
 {
     cv::VideoCapture video = readVideo("../res/test.avi");
-    displayImage(getFrame(video));
+    if(video.isOpened())
+    {
+        displayFrame(video);
+    }
     return 0;
 }
