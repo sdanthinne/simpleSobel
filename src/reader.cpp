@@ -20,14 +20,15 @@ Mat readImage(std::string fileName)
 void createDisplayFrame()
 {
    namedWindow(WINDOW_NAME, WINDOW_NORMAL);
+   waitKey(0);
 }
 
 VideoCapture readVideo(std::string fileName)
 {
-   VideoCapture v;
-   if(!v.open(fileName,4)){
-      cerr << "there was a problem with opening the video file" << endl;
-   }
+   VideoCapture v = VideoCapture(fileName);
+   //if(!v.open(fileName,4)){
+   //   cerr << "there was a problem with opening the video file" << endl;
+   //}
    return v;
 }
 
