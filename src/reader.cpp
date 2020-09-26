@@ -24,7 +24,7 @@ void displayFrame(VideoCapture v)
             break;
         }else if(key=='n'){
             //go to the next frame
-            currFrame = grayscaleFrame(getFrame(v));
+            currFrame = sobel(getFrame(v));
         }
     }
 }
