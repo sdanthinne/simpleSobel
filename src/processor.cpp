@@ -10,11 +10,18 @@
 #define KERNEL_SIZE 9
 #define KERNEL_SIDE 3
 
+//a vector magnitude approximation based on the max and min vector lengths. 
+//for more accuracy, multiplying result by 15/16 would work
+#define VEC_MAG(A,B)\
+    ((A) > (B)) ? 15*((A) + ((B)>>1))/16 : 15*((B) + ((A)>>1))/16
+
+
 using namespace cv;
 using namespace std;
 
 int x_kernel[] = X_KERNEL;
 int y_kernel[] = Y_KERNEL;
+
 /**
 * Performs a sobel filter on a Mat frame
 */
@@ -47,6 +54,10 @@ void populatePhotoKernel(int centerRow, int centerCol, Mat frame,int * photoKern
     }
 }
 
+int clamp(long value,int min,int max)
+{
+    return (value>max)? max : (value < min) ? min : value;
+}
 /**
  * Creates a sobel calculated frame from a grayscale image.
  */
@@ -61,17 +72,20 @@ Mat sobelFrameFromGrayScale(Mat frame)
    {
        for(int col=1;col<frame.cols-1;col++)
        {
-           uint8_t result;
            //now we have each pixel location, so do the calculationa
            populatePhotoKernel(row,col,frame,photoKernel);
            Pixel * current = frame.ptr<Pixel>(row,col);
            //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
-           current->x = current->y = current->z = (result=sqrt(pow(matValMult(photoKernel,x_kernel),2)+pow(matValMult(photoKernel,y_kernel),2))>UCHAR_MAX)? 255 : result;
+           current->x = 
+               current->y = 
+               current->z = 
+               clamp(
+                VEC_MAG(
+                 matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
            
 
        }
    }
-   cout << totalIterate << endl;
    return frame;
 }
 
