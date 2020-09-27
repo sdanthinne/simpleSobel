@@ -1,5 +1,7 @@
 #include "processor.hpp"
 #include <iostream>
+#include <limits.h>
+#include <math.h>
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
 #define BLUE_CONSTANT 0.0722
@@ -24,9 +26,9 @@ Mat sobel(Mat frame)
 /**
  * performs the actual multiplication
  */
-double matValMult(int array1[], int array2[])
+long matValMult(int array1[], int array2[])
 {
-    double resultant=0;
+    long resultant=0;
     for(int i=0; i<KERNEL_SIZE;i++)
     {
         resultant += array1[i] * array2[i];
@@ -59,11 +61,12 @@ Mat sobelFrameFromGrayScale(Mat frame)
    {
        for(int col=1;col<frame.cols-1;col++)
        {
+           uint8_t result;
            //now we have each pixel location, so do the calculationa
            populatePhotoKernel(row,col,frame,photoKernel);
            Pixel * current = frame.ptr<Pixel>(row,col);
-
-           current->x = current->y = current->z = matValMult(photoKernel,x_kernel)+matValMult(photoKernel,y_kernel);
+           //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
+           current->x = current->y = current->z = (result=sqrt(pow(matValMult(photoKernel,x_kernel),2)+pow(matValMult(photoKernel,y_kernel),2))>UCHAR_MAX)? 255 : result;
            
 
        }
