@@ -16,7 +16,8 @@ void displayFrame(VideoCapture v)
     {
         imshow(WINDOW_NAME,currFrame);
         resizeWindow(WINDOW_NAME,600,600);
-
+        currFrame = sobel(getFrame(v));
+        cout << "next frame loaded" << endl;
         if((key=waitKey(0))=='q')
         {
             //quit

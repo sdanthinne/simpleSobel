@@ -64,7 +64,6 @@ int clamp(long value,int min,int max)
 
 Mat sobelFrameFromGrayScale(Mat frame)
 {
-   int totalIterate = frame.rows * frame.cols;
 
    //currently this ignores the very edges of the image
    int photoKernel[9];
