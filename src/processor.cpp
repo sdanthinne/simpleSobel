@@ -2,7 +2,9 @@
 #include <iostream>
 #include <limits.h>
 #include <math.h>
-#include <pthread.h>
+#include <thread>
+#include <mutex>
+
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
 #define BLUE_CONSTANT 0.0722
@@ -15,7 +17,13 @@
 //for more accuracy, multiplying result by 15/16 would work
 #define VEC_MAG(A,B)\
     ((A) > (B)) ? 15*((A) + ((B)>>1))/16 : 15*((B) + ((A)>>1))/16
-
+/**
+*Implementation of threads - I think we want to spawn threads, 
+* perform sobel on the a section of the image with size around the l1 (per core) (32KB) (faster memory access)
+* cache. We need to be able to calculate convolutions on every pixel, so actual selection will 
+* overlap with other threads' selections (border pixel conv. not calculated, overlap takes care of it)
+* 
+*/
 
 using namespace cv;
 using namespace std;
@@ -60,7 +68,8 @@ int clamp(long value,int min,int max)
     return (value>max)? max : (value < min) ? min : value;
 }
 /**
- * Creates a sobel calculated frame from a grayscale image.
+ * Creates a sobel calculated frame from a grayscale image. 
+ * for threading, it might be worth getting the grayscale calculation at the same time as the sobel calculation.
  */
 
 Mat sobelFrameFromGrayScale(Mat frame)
