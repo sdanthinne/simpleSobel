@@ -2,6 +2,7 @@
 #include <iostream>
 #include <limits.h>
 #include <math.h>
+#include <pthread.h>
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
 #define BLUE_CONSTANT 0.0722

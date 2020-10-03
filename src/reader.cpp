@@ -1,5 +1,6 @@
 #include "reader.hpp"
 #include "processor.hpp"
+#include <ctime>
 #define WINDOW_NAME "images"
 
 using namespace std;
@@ -16,17 +17,16 @@ void displayFrame(VideoCapture v)
     {
         imshow(WINDOW_NAME,currFrame);
         resizeWindow(WINDOW_NAME,600,600);
+        int time_init = clock();
         currFrame = sobel(getFrame(v));
-        cout << "next frame loaded" << endl;
-        if((key=waitKey(0))=='q')
+        time_init = clock()-time_init;
+        cout << "next frame loaded in: " << (float)time_init/CLOCKS_PER_SEC << "s" << endl;
+        if((key=waitKey(1))=='q')
         {
             //quit
             destroyAllWindows();
             break;
-        }else if(key=='n'){
-            //go to the next frame
-            currFrame = sobel(getFrame(v));
-        }
+        } 
     }
 }
 
