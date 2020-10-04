@@ -12,6 +12,7 @@
 #define Y_KERNEL {-1,-2,-1,0,0,0,1,2,1}
 #define KERNEL_SIZE 9
 #define KERNEL_SIDE 3
+#define L1_AREA_SIZE 100
 
 //a vector magnitude approximation based on the max and min vector lengths. 
 //for more accuracy, multiplying result by 15/16 would work
@@ -40,6 +41,15 @@ Mat sobel(Mat frame)
 }
 
 /**
+* This function performs sobel on a 100x100 area 
+*  size of the L1 cache(per core)
+*/
+Mat sobelThreadArea(Mat frame,int x1,int y1)
+{
+    //pass
+    return frame;
+}
+/**
  * performs the actual multiplication
  */
 long matValMult(int array1[], int array2[])
@@ -59,7 +69,19 @@ void populatePhotoKernel(int centerRow, int centerCol, Mat frame,int * photoKern
 {
     for(int i=0;i<KERNEL_SIZE;i++)
     {
-        photoKernel[i] = frame.at<Pixel>(centerRow+i/KERNEL_SIDE,centerCol+i%KERNEL_SIDE).x;
+        Pixel selected;
+        try {
+
+            selected = frame.at<Pixel>(centerRow+i/KERNEL_SIDE,centerCol+i%KERNEL_SIDE);
+            if(centerCol==0)
+            {
+                cout << selected << endl;
+            }
+        } catch(Exception ex){
+            selected = Pixel(0,0,0);
+            cout << "blank pixel" << endl;
+        }
+        photoKernel[i] = selected.x;
     }
 }
 
@@ -74,28 +96,29 @@ int clamp(long value,int min,int max)
 
 Mat sobelFrameFromGrayScale(Mat frame)
 {
-
-   //currently this ignores the very edges of the image
-   int photoKernel[9];
-   for(int row=1;row<frame.rows-1;row++)
-   {
-       for(int col=1;col<frame.cols-1;col++)
-       {
-           //now we have each pixel location, so do the calculationa
-           populatePhotoKernel(row,col,frame,photoKernel);
-           Pixel * current = frame.ptr<Pixel>(row,col);
-           //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
-           current->x = 
-               current->y = 
-               current->z = 
-               clamp(
-                VEC_MAG(
-                 matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
+    cout << frame.rows << " x " << frame.cols << endl;
+    Mat resultantMat;
+    frame.copyTo(resultantMat);
+    int photoKernel[9];
+    for(int row=0;row<frame.rows;row++)
+    {
+        for(int col=0;col<frame.cols;col++)
+        {
+            //now we have each pixel location, so do the calculation
+            populatePhotoKernel(row,col,frame,photoKernel);
+            Pixel * current = frame.ptr<Pixel>(row,col);
+            //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
+            current->x = 
+                current->y = 
+                current->z = 
+                clamp(
+                    VEC_MAG(
+                    matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
            
 
-       }
-   }
-   return frame;
+        }
+    }
+    return resultantMat;
 }
 
 

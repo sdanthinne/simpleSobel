@@ -1,7 +1,7 @@
 TARGET   = runMe
 CC       = g++
-CCFLAGS  =  -Wall -O0 `pkg-config --cflags opencv4`
-LDFLAGS  = -lm `pkg-config  --libs --cflags opencv4`
+CCFLAGS  =  -Wall -O0 `pkg-config --cflags opencv` -pthread
+LDFLAGS  = -lm `pkg-config  --libs --cflags opencv` -pthread
 SOURCES  = $(wildcard *.cpp)
 INCLUDES = $(wildcard *.hpp)
 OBJDIR   = ../obj/
