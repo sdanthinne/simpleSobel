@@ -50,7 +50,10 @@ Mat sobelThreadArea(Mat frame,int x1,int y1)
     //pass
     for(int i=0;i<x1;i++)
     {
-        for(int j=0; j<y1;)
+        for(int j=0; j<y1;j++)
+	{
+		//return nothing
+	}
     }
     return frame;
 }
@@ -103,10 +106,13 @@ Mat threadedSobelFrameFromGrayScale(Mat frame)
 {
     //we are using the referenceMat to be sure that we are not going to have any read-write issues WRT the 
     //sobel due to overwrites.
-    Mat referenceMat;
+    /*Mat referenceMat;
     frame.copyTo(resultantMat);
     int size = frame.rows*frame.cols;
     for(int i=0;i<frame.rows)
+    {
+	//pass
+    }*/
     return frame;
 }
 
