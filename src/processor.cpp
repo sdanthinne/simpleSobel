@@ -106,9 +106,9 @@ Mat sobelFrameFromGrayScale(Mat frame)
     Mat resultantMat;
     frame.copyTo(resultantMat);
     int photoKernel[9];
-    for(int row=0;row<frame.rows;row++)
+    for(int row=1;row<frame.rows-1;row++)
     {
-        for(int col=0;col<frame.cols;col++)
+        for(int col=1;col<frame.cols-1;col++)
         {
             //now we have each pixel location, so do the calculation
             populatePhotoKernel(row,col,frame,photoKernel);
