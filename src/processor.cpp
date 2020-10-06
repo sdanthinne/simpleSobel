@@ -41,12 +41,17 @@ Mat sobel(Mat frame)
 }
 
 /**
-* This function performs sobel on a 100x100 area 
+* This function performs sobel on a 100x100 area with 
+* x1,y1 being the right left corner of this region
 *  size of the L1 cache(per core)
 */
 Mat sobelThreadArea(Mat frame,int x1,int y1)
 {
     //pass
+    for(int i=0;i<x1;i++)
+    {
+        for(int j=0; j<y1;)
+    }
     return frame;
 }
 /**
@@ -75,7 +80,7 @@ void populatePhotoKernel(int centerRow, int centerCol, Mat frame,int * photoKern
             selected = frame.at<Pixel>(centerRow+i/KERNEL_SIDE,centerCol+i%KERNEL_SIDE);
             if(centerCol==0)
             {
-                cout << selected << endl;
+                //cout << selected << endl;
             }
         } catch(Exception ex){
             selected = Pixel(0,0,0);
@@ -94,6 +99,17 @@ int clamp(long value,int min,int max)
  * for threading, it might be worth getting the grayscale calculation at the same time as the sobel calculation.
  */
 
+Mat threadedSobelFrameFromGrayScale(Mat frame)
+{
+    //we are using the referenceMat to be sure that we are not going to have any read-write issues WRT the 
+    //sobel due to overwrites.
+    Mat referenceMat;
+    frame.copyTo(resultantMat);
+    int size = frame.rows*frame.cols;
+    for(int i=0;i<frame.rows)
+    return frame;
+}
+
 Mat sobelFrameFromGrayScale(Mat frame)
 {
     cout << frame.rows << " x " << frame.cols << endl;
@@ -106,7 +122,7 @@ Mat sobelFrameFromGrayScale(Mat frame)
         {
             //now we have each pixel location, so do the calculation
             populatePhotoKernel(row,col,frame,photoKernel);
-            Pixel * current = frame.ptr<Pixel>(row,col);
+            Pixel * current = resultantMat.ptr<Pixel>(row,col);
             //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
             current->x = 
                 current->y = 
