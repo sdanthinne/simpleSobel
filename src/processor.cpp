@@ -112,7 +112,7 @@ Mat sobelFrameFromGrayScale(Mat frame)
         {
             //now we have each pixel location, so do the calculation
             populatePhotoKernel(row,col,frame,photoKernel);
-            Pixel * current = frame.ptr<Pixel>(row,col);
+            Pixel * current = resultantMat.ptr<Pixel>(row,col);
             //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
             current->x =
                 current->y = 
@@ -124,7 +124,7 @@ Mat sobelFrameFromGrayScale(Mat frame)
 
         }
     }
-    return frame;
+    return resultantMat;
 }
 
 
@@ -141,24 +141,29 @@ Mat grayscaleFrame(Mat frame)
 }
 
 /**
- * divides parent mat into quadrants with overlap=2px
- * (assumes that video sizes are even.)
- * [0,1]
- * [2,3]
- */
-Mat * split4FromParent(Mat parent)
+* This function performs sobel on a 100x100 area with 
+* x1,y1 being the right left corner of this region
+*  size of the L1 cache(per core)
+*/
+Mat sobelThreadArea(Mat frame,Mat referenceMat,int x1,int y1)
 {
-    Mat matCollection[4];
-    int colSize = parent.cols/2;
-    int rowSize = parent.rows/2;
-    matCollection[0] = parent(Range(0,rowSize+1),Range(0,colSize+1));
-    matCollection[1] = parent(Range(0,rowSize+1),Range(colSize-1,parent.cols));
-    matCollection[2] = parent(Range(rowSize-1,parent.rows),Range(0,colSize+1));
-    matCollection[3] = parent(Range(rowSize-1,parent.rows),Range(colSize-1,parent.cols));
-    return matCollection;
+    //pass
+    int photoKernel[9];
+    for(int col=x1;col<(x1+100);col++)
+    {
+        for(int row=y1; row<(y1+100);row++)
+	    {
+            //this
+            populatePhotoKernel(row,col,referenceMat,photoKernel);
+            Pixel * current = frame.ptr<Pixel>(row,col);
+            current->x =
+                current->y = 
+                current->z = 
+                clamp(
+                    VEC_MAG(
+                    matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
 
+	    }
+    }
+    return frame;
 }
-
-
-
-
