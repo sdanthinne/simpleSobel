@@ -40,23 +40,7 @@ Mat sobel(Mat frame)
     return sobelFrameFromGrayScale(grayscaleFrame(frame));
 }
 
-/**
-* This function performs sobel on a 100x100 area with 
-* x1,y1 being the right left corner of this region
-*  size of the L1 cache(per core)
-*/
-Mat sobelThreadArea(Mat frame,int x1,int y1)
-{
-    //pass
-    for(int i=0;i<x1;i++)
-    {
-        for(int j=0; j<y1;j++)
-	{
-		//return nothing
-	}
-    }
-    return frame;
-}
+
 /**
  * performs the actual multiplication
  */
@@ -71,25 +55,25 @@ long matValMult(int array1[], int array2[])
 }
 
 /**
- * populates the photo kernel from the frame around the center coords
+ * populates the photo kernel from the frame around the top left
+ * COULD BE SOURCE OF MEMORY OVER WRITE
  */
 void populatePhotoKernel(int centerRow, int centerCol, Mat frame,int * photoKernel)
 {
     for(int i=0;i<KERNEL_SIZE;i++)
     {
-        Pixel selected;
-        try {
+        //this I think is slow. 
+        //May need performance optimization in the future.
+        Pixel selected = frame.at<Pixel>(
+                centerRow+i/KERNEL_SIDE,
+                centerCol+i%KERNEL_SIDE);
 
-            selected = frame.at<Pixel>(centerRow+i/KERNEL_SIDE,centerCol+i%KERNEL_SIDE);
-            if(centerCol==0)
-            {
-                //cout << selected << endl;
-            }
-        } catch(Exception ex){
-            selected = Pixel(0,0,0);
-            cout << "blank pixel" << endl;
-        }
         photoKernel[i] = selected.x;
+
+        //(centerCol>frame.cols+)
+        //photoKernel[i*3] = selected[0].x;
+        //photoKernel[i*3+1] = selected[1].x;
+        //photoKernel[i*3+2] = selected[2].x;
     }
 }
 
@@ -130,7 +114,7 @@ Mat sobelFrameFromGrayScale(Mat frame)
             populatePhotoKernel(row,col,frame,photoKernel);
             Pixel * current = resultantMat.ptr<Pixel>(row,col);
             //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
-            current->x = 
+            current->x =
                 current->y = 
                 current->z = 
                 clamp(
@@ -153,5 +137,33 @@ Mat grayscaleFrame(Mat frame)
         float newC = p.x*BLUE_CONSTANT + p.y*GREEN_CONSTANT + p.z*RED_CONSTANT;
         p.x = p.y = p.z = newC;
     });
+    return frame;
+}
+
+/**
+* This function performs sobel on a 100x100 area with 
+* x1,y1 being the right left corner of this region
+*  size of the L1 cache(per core)
+*/
+Mat sobelThreadArea(Mat frame,Mat referenceMat,int x1,int y1)
+{
+    //pass
+    int photoKernel[9];
+    for(int col=x1;col<(x1+100);col++)
+    {
+        for(int row=y1; row<(y1+100);row++)
+	    {
+            //this
+            populatePhotoKernel(row,col,referenceMat,photoKernel);
+            Pixel * current = frame.ptr<Pixel>(row,col);
+            current->x =
+                current->y = 
+                current->z = 
+                clamp(
+                    VEC_MAG(
+                    matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
+
+	    }
+    }
     return frame;
 }
