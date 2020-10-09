@@ -92,7 +92,6 @@ int clamp(long value,int min,int max)
 
 Mat sobelFrameFromGrayScale(Mat frame)
 {
-    cout << frame.rows << " x " << frame.cols << endl;
     Mat resultantMat;
     try{
     frame.copyTo(resultantMat);
@@ -154,6 +153,7 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
 {
     int colSize = parent.cols/2;
     int rowSize = parent.rows/2;
+
     matCollection[0] = parent(Range(0,rowSize+1),Range(0,colSize+1));
     matCollection[1] = parent(Range(0,rowSize+1),Range(colSize-1,parent.cols));
     matCollection[2] = parent(Range(rowSize-1,parent.rows),Range(0,colSize+1));
@@ -163,6 +163,28 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
 }
 
 
+Mat * merge4ToParent(Mat * parent,threadInfo_s * info)
+{
+    int colSize = parent->cols/2;
+    int rowSize = parent->rows/2;
+    //not sure how to make a the split images (same memory location?)
+    //index as a total again.
+    //pretty dirty code NGL
+    for(int i=(info->thread_number/2)*rowSize;i<(info->thread_number/2)*rowSize+rowSize;i++)
+    {
+        for(int j=(info->thread_number%2)*colSize;j<(info->thread_number%2)*colSize+colSize;j++)
+        {
+            Pixel * p = parent->ptr<Pixel>(i,j);
+            Pixel * newpt = info->frame.ptr<Pixel>(i-(info->thread_number/2)*rowSize,j-(info->thread_number%2)*colSize);
+            p->x=p->y=p->z =  newpt->x;
+            //cout << "assigned" << endl;
+        }
+        
+    }
+    return parent;
+
+}
+
 /**
  * runs on thread PER FRAME to do the processing.
  */
@@ -170,10 +192,12 @@ void * launchThread(void * info)
 {
     //pass
     //cout << ((threadInfo_s *)info)->frame << endl;
-    Mat resultant = sobelFrame(((threadInfo_s *)info)->frame);
+    sobelFrame(((threadInfo_s *)info)->frame);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
-    
-    cout << resultant.isSubmatrix() << endl;
+    //here we need to combine the rest
+    merge4ToParent(&resultantMat,(threadInfo_s *)info); 
+    //cout << "resultSize: " << resultant.rows << "x"<< resultant.cols << endl;
+    //((threadInfo_s *)info)->frame.copyTo(resultantMat);
     pthread_mutex_unlock(&process_mutex);
 }
 
@@ -222,6 +246,7 @@ Mat threadedSobelFrame(Mat frame)
 Mat sobel(Mat frame)
 {   
     
+    cout << frame.rows << " x " << frame.cols << endl;
     return threadedSobelFrame(frame);
     //return sobelFrameFromGrayScale(grayscaleFrame(frame));
 }
