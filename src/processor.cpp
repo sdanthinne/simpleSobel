@@ -106,7 +106,7 @@ Mat sobelFrameFromGrayScale(Mat frame)
         for(int col=1;col<frame.cols-1;col++)
         {
             //now we have each pixel location, so do the calculation
-            populatePhotoKernel(row,col,resultantMat,photoKernel);
+            populatePhotoKernel(row-1,col-1,resultantMat,photoKernel);
             Pixel * current = frame.ptr<Pixel>(row,col);
             current->x =
                 current->y = 
@@ -172,6 +172,7 @@ void * launchThread(void * info)
     //cout << ((threadInfo_s *)info)->frame << endl;
     Mat resultant = sobelFrame(((threadInfo_s *)info)->frame);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
+    
     cout << resultant.isSubmatrix() << endl;
     pthread_mutex_unlock(&process_mutex);
 }
