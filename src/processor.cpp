@@ -169,10 +169,10 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
 void * launchThread(void * info)
 {
     //pass
-    cout << ((threadInfo_s *)info)->frame << endl;
+    //cout << ((threadInfo_s *)info)->frame << endl;
     Mat resultant = sobelFrame(((threadInfo_s *)info)->frame);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
-    //cout << resultant.isSubmatrix() << endl;
+    cout << resultant.isSubmatrix() << endl;
     pthread_mutex_unlock(&process_mutex);
 }
 
@@ -200,10 +200,11 @@ Mat threadedSobelFrame(Mat frame)
     {
         info[i].frame = matCollection[i];
         info[i].thread_number = i;
+        
     }
     for(int i=0;i<DIVISOR;i++)
     {
-        pthread_create(&thread[i],&attr,launchThread,(void *)&threadFrame[i]);
+        pthread_create(&thread[i],&attr,launchThread,(void *)&info[i]);
     }
     for(int i=0;i<DIVISOR;i++)
     {
