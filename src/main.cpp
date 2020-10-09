@@ -5,7 +5,7 @@
 #define NUMTHREADS 2
 #define ROUNDS 2
 using namespace std;
-
+/*
 pthread_barrier_t barrier;
 pthread_mutex_t mymutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -50,8 +50,8 @@ int main()
     pthread_barrier_destroy(&barrier);
     return 0;
 }
-
-/**int main(int argc, char** argv)
+*/
+int main(int argc, char** argv)
 {
     char * videoTitle;
     if(argc == 2)
@@ -77,4 +77,4 @@ int main()
         displayFrame(video);
     }
     return 0;
-}*/
+}

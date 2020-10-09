@@ -2,8 +2,8 @@
 #include <iostream>
 #include <limits.h>
 #include <math.h>
-#include <thread>
-#include <mutex>
+#include <pthread.h>
+//#include <mutex>
 
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
@@ -13,6 +13,7 @@
 #define KERNEL_SIZE 9
 #define KERNEL_SIDE 3
 #define L1_AREA_SIZE 100
+#define DIVISOR 4
 
 //a vector magnitude approximation based on the max and min vector lengths. 
 //for more accuracy, multiplying result by 15/16 would work
@@ -32,14 +33,19 @@ using namespace std;
 int x_kernel[] = X_KERNEL;
 int y_kernel[] = Y_KERNEL;
 
-/**
-* Performs a sobel filter on a Mat frame
-*/
-Mat sobel(Mat frame)
-{   
-    return sobelFrameFromGrayScale(grayscaleFrame(frame));
-}
+Mat threadFrame[DIVISOR];
+pthread_t thread[DIVISOR];
+pthread_mutex_t process_mutex = PTHREAD_MUTEX_INITIALIZER;
+Mat resultantMat;
 
+//struct is passed through to each thread.
+struct threadInfo_s
+{
+    int thread_number;
+    int x_start;
+    int y_start;
+    Mat frame;
+};
 
 /**
  * performs the actual multiplication
@@ -81,39 +87,27 @@ int clamp(long value,int min,int max)
 {
     return (value>max)? max : (value < min) ? min : value;
 }
-/**
- * Creates a sobel calculated frame from a grayscale image. 
- * for threading, it might be worth getting the grayscale calculation at the same time as the sobel calculation.
- */
 
-Mat threadedSobelFrameFromGrayScale(Mat frame)
-{
-    //we are using the referenceMat to be sure that we are not going to have any read-write issues WRT the 
-    //sobel due to overwrites.
-    /*Mat referenceMat;
-    frame.copyTo(resultantMat);
-    int size = frame.rows*frame.cols;
-    for(int i=0;i<frame.rows)
-    {
-	//pass
-    }*/
-    return frame;
-}
+
 
 Mat sobelFrameFromGrayScale(Mat frame)
 {
     cout << frame.rows << " x " << frame.cols << endl;
     Mat resultantMat;
+    try{
     frame.copyTo(resultantMat);
+    }catch (Exception ex)
+    {
+        cout << "copy Ex" << endl;
+    }
     int photoKernel[9];
     for(int row=1;row<frame.rows-1;row++)
     {
         for(int col=1;col<frame.cols-1;col++)
         {
             //now we have each pixel location, so do the calculation
-            populatePhotoKernel(row,col,frame,photoKernel);
+            populatePhotoKernel(row,col,resultantMat,photoKernel);
             Pixel * current = frame.ptr<Pixel>(row,col);
-            //currently this maxes the result, but IDK if that is realyl what we want in this case. Looks more sobel-y without max
             current->x =
                 current->y = 
                 current->z = 
@@ -133,11 +127,21 @@ Mat sobelFrameFromGrayScale(Mat frame)
 */
 Mat grayscaleFrame(Mat frame)
 {
+    try{
     frame.forEach<Pixel>([&](Pixel &p, const int * position) ->  void {
         float newC = p.x*BLUE_CONSTANT + p.y*GREEN_CONSTANT + p.z*RED_CONSTANT;
         p.x = p.y = p.z = newC;
     });
+    }catch (Exception ex)
+    {
+        cout << "grayscale ex" << endl;
+    }
     return frame;
+}
+
+Mat sobelFrame(Mat frame)
+{
+    return sobelFrameFromGrayScale(grayscaleFrame(frame));
 }
 
 /**
@@ -146,9 +150,8 @@ Mat grayscaleFrame(Mat frame)
  * [0,1]
  * [2,3]
  */
-Mat * split4FromParent(Mat parent)
+Mat * split4FromParent(Mat parent,Mat * matCollection)
 {
-    Mat matCollection[4];
     int colSize = parent.cols/2;
     int rowSize = parent.rows/2;
     matCollection[0] = parent(Range(0,rowSize+1),Range(0,colSize+1));
@@ -160,5 +163,65 @@ Mat * split4FromParent(Mat parent)
 }
 
 
+/**
+ * runs on thread PER FRAME to do the processing.
+ */
+void * launchThread(void * info)
+{
+    //pass
+    cout << ((threadInfo_s *)info)->frame << endl;
+    Mat resultant = sobelFrame(((threadInfo_s *)info)->frame);
+    pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
+    //cout << resultant.isSubmatrix() << endl;
+    pthread_mutex_unlock(&process_mutex);
+}
+
+
+
+/**
+ * Creates a sobel calculated frame from a grayscale image. 
+ * for threading, it might be worth getting the grayscale calculation at the same time as the sobel calculation.
+ */
+Mat threadedSobelFrame(Mat frame)
+{
+
+    Mat matCollection[DIVISOR];
+    split4FromParent(frame,matCollection);
+    threadInfo_s info[DIVISOR];
+    frame.copyTo(resultantMat);
+    void * threadStatus[DIVISOR];
+    //following lines NEED TO BE MOVED
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);//make threads joinable
+
+    //populate the threadInfo struct
+    for(int i=0; i<DIVISOR;i++)
+    {
+        info[i].frame = matCollection[i];
+        info[i].thread_number = i;
+    }
+    for(int i=0;i<DIVISOR;i++)
+    {
+        pthread_create(&thread[i],&attr,launchThread,(void *)&threadFrame[i]);
+    }
+    for(int i=0;i<DIVISOR;i++)
+    {
+        pthread_join(thread[i],&threadStatus[i]);
+    }
+    return resultantMat;
+}
+
+
+
+/**
+* Performs a sobel filter on a Mat frame
+*/
+Mat sobel(Mat frame)
+{   
+    
+    return threadedSobelFrame(frame);
+    //return sobelFrameFromGrayScale(grayscaleFrame(frame));
+}
 
 
