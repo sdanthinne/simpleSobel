@@ -162,7 +162,9 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
 
 }
 
-
+/**
+ * currently, this takes about 0.03 seconds on my desktop. Not too good.
+ */
 Mat * merge4ToParent(Mat * parent,threadInfo_s * info)
 {
     int colSize = parent->cols/2;
@@ -170,13 +172,14 @@ Mat * merge4ToParent(Mat * parent,threadInfo_s * info)
     //not sure how to make a the split images (same memory location?)
     //index as a total again.
     //pretty dirty code NGL
-    for(int i=(info->thread_number/2)*rowSize;i<(info->thread_number/2)*rowSize+rowSize;i++)
+    for(int i=(info->thread_number/2)*rowSize;i<=(info->thread_number/2)*rowSize+rowSize;i++)
     {
-        for(int j=(info->thread_number%2)*colSize;j<(info->thread_number%2)*colSize+colSize;j++)
+        for(int j=(info->thread_number%2)*colSize;j<=(info->thread_number%2)*colSize+colSize;j++)
         {
             Pixel * p = parent->ptr<Pixel>(i,j);
             Pixel * newpt = info->frame.ptr<Pixel>(i-(info->thread_number/2)*rowSize,j-(info->thread_number%2)*colSize);
-            p->x=p->y=p->z =  newpt->x;
+            *p = *newpt;
+            //p->x=p->y=p->z =  newpt->x;
             //cout << "assigned" << endl;
         }
         
