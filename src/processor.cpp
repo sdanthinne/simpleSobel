@@ -42,8 +42,6 @@ Mat resultantMat;
 struct threadInfo_s
 {
     int thread_number;
-    int x_start;
-    int y_start;
     Mat frame;
 };
 
@@ -193,8 +191,6 @@ Mat * merge4ToParent(Mat * parent,threadInfo_s * info)
  */
 void * launchThread(void * info)
 {
-    //pass
-    //cout << ((threadInfo_s *)info)->frame << endl;
     sobelFrame(((threadInfo_s *)info)->frame);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
     //here we need to combine the rest
@@ -216,6 +212,7 @@ Mat threadedSobelFrame(Mat frame)
     Mat matCollection[DIVISOR];
     split4FromParent(frame,matCollection);
     threadInfo_s info[DIVISOR];
+    //slow, might just copy mat size
     frame.copyTo(resultantMat);
     void * threadStatus[DIVISOR];
     //following lines NEED TO BE MOVED
