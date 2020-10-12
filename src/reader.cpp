@@ -37,6 +37,12 @@ void displayFrameMat(Mat frame)
 {
     imshow(WINDOW_NAME,frame);
     resizeWindow(WINDOW_NAME,600,600);
+    if((key=waitKey(1))=='q')
+    {
+            //quit
+        destroyAllWindows();
+        break;
+    } 
 }
 
 Mat readImage(std::string fileName)
