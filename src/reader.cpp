@@ -30,6 +30,15 @@ void displayFrame(VideoCapture v)
     }
 }
 
+/**
+* Just opens a window and displays a frame. Nothing much
+*/
+void displayFrameMat(Mat frame)
+{
+    imshow(WINDOW_NAME,frame);
+    resizeWindow(WINDOW_NAME,600,600);
+}
+
 Mat readImage(std::string fileName)
 {
    return imread(fileName,IMREAD_COLOR);

@@ -62,22 +62,22 @@ long matValMult(int array1[], int array2[])
  * populates the photo kernel from the frame around the top left
  * COULD BE SOURCE OF MEMORY OVER WRITE
  */
-void populatePhotoKernel(int centerRow, int centerCol, Mat frame,int * photoKernel)
+void populatePhotoKernel(int row, int col, Mat frame,int * photoKernel)
 {
-    for(int i=0;i<KERNEL_SIZE;i++)
+    for(int i=0;i<KERNEL_SIDE;i++)
     {
         //this I think is slow. 
         //May need performance optimization in the future.
-        Pixel selected = frame.at<Pixel>(
-                centerRow+i/KERNEL_SIDE,
-                centerCol+i%KERNEL_SIDE);
+        Pixel * selected = frame.ptr<Pixel>(
+                row+i,
+                col);
 
-        photoKernel[i] = selected.x;
+        //photoKernel[i] = selected.x;
 
         //(centerCol>frame.cols+)
-        //photoKernel[i*3] = selected[0].x;
-        //photoKernel[i*3+1] = selected[1].x;
-        //photoKernel[i*3+2] = selected[2].x;
+        photoKernel[i*3] = selected[0].x;
+        photoKernel[i*3+1] = selected[1].x;
+        photoKernel[i*3+2] = selected[2].x;
     }
 }
 
@@ -238,8 +238,6 @@ Mat threadedSobelFrame(Mat frame)
     return resultantMat;
 }
 
-
-
 /**
 * Performs a sobel filter on a Mat frame
 */
@@ -250,5 +248,3 @@ Mat sobel(Mat frame)
     return threadedSobelFrame(frame);
     //return sobelFrameFromGrayScale(grayscaleFrame(frame));
 }
-
-
