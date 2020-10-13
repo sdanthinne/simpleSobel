@@ -1,6 +1,6 @@
 #include "reader.hpp"
-#include "processor.hpp"
 #include <ctime>
+#include "sobel.cpp"
 #define WINDOW_NAME "images"
 
 using namespace std;
@@ -10,7 +10,7 @@ Mat getFrame(VideoCapture v);
 
 void displayFrame(VideoCapture v)
 {
-    int key=0;
+    /*int key=0;
     Mat currFrame = getFrame(v);
     namedWindow(WINDOW_NAME, WINDOW_NORMAL);
     while(key!='q')
@@ -27,7 +27,8 @@ void displayFrame(VideoCapture v)
             destroyAllWindows();
             break;
         } 
-    }
+    }*/
+    startSobel(v);
 }
 
 /**

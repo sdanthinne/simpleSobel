@@ -39,11 +39,11 @@ pthread_mutex_t process_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat resultantMat;
 
 //struct is passed through to each thread.
-struct threadInfo_s
-{
-    int thread_number;
-    Mat frame;
-};
+//struct threadInfo_s
+//{
+ //   int thread_number;
+  //  Mat frame;
+//};
 
 /**
  * performs the actual multiplication
