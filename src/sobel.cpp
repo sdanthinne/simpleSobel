@@ -5,7 +5,7 @@
 #include "reader.hpp"
 #include "processor.hpp"
 #include <pthread.h>
-
+#include <ctime>
 #define THREAD_COUNT 4
 
 using namespace cv;
@@ -49,6 +49,7 @@ void startSobel(VideoCapture v)
     split4FromParent(inMat,splitMats);
     setThreadOpt();//set the pthread options
     k=0;//input key
+    int ttime = 0;
 
     threadInfo_s thread_infos[4];
     //launch the pthreads
@@ -63,7 +64,9 @@ void startSobel(VideoCapture v)
     }
     while((k=waitKey(1))!='q')
     {
+	ttime = clock();
         pthread_barrier_wait(&sobel_barrier);
+	cout << "time to sobel: " << ((float)(clock()-ttime))/CLOCKS_PER_SEC << "s" <<endl;
         //here, we fill the next frame
         displayFrameMat(inMat);
         inMat = getFrame(v);
