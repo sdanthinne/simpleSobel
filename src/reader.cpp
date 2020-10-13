@@ -1,6 +1,6 @@
 #include "reader.hpp"
 #include <ctime>
-#include "sobel.cpp"
+#include "sobel.hpp"
 #define WINDOW_NAME "images"
 
 using namespace std;
