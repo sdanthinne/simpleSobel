@@ -194,7 +194,7 @@ void * launchThread(void * info)
     sobelFrame(((threadInfo_s *)info)->frame);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
     //here we need to combine the rest
-    merge4ToParent(&resultantMat,(threadInfo_s *)info); 
+    //merge4ToParent(&resultantMat,(threadInfo_s *)info); 
     //cout << "resultSize: " << resultant.rows << "x"<< resultant.cols << endl;
     //((threadInfo_s *)info)->frame.copyTo(resultantMat);
     pthread_mutex_unlock(&process_mutex);
@@ -235,7 +235,7 @@ Mat threadedSobelFrame(Mat frame)
     {
         pthread_join(thread[i],&threadStatus[i]);
     }
-    return resultantMat;
+    return frame;
 }
 
 /**

@@ -10,4 +10,5 @@ void createDisplayFrame();
 cv::Mat readImage(std::string fileName);
 cv::VideoCapture readVideo(std::string fileName);
 cv::Mat getFrame(cv::VideoCapture video);
+void displayFrameMat(cv::Mat frame);
 #endif
