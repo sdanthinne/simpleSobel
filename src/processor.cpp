@@ -68,16 +68,16 @@ void populatePhotoKernel(int row, int col, Mat frame,int * photoKernel)
     {
         //this I think is slow. 
         //May need performance optimization in the future.
-        Pixel * selected = frame.ptr<Pixel>(
+        uint8_t * selected = frame.ptr<uint8_t>(
                 row+i,
                 col);
 
         //photoKernel[i] = selected.x;
 
         //(centerCol>frame.cols+)
-        photoKernel[i*3] = selected[0].x;
-        photoKernel[i*3+1] = selected[1].x;
-        photoKernel[i*3+2] = selected[2].x;
+        photoKernel[i*3] = selected[0];
+        photoKernel[i*3+1] = selected[1];
+        photoKernel[i*3+2] = selected[2];
     }
 }
 
@@ -88,26 +88,17 @@ int clamp(long value,int min,int max)
 
 
 
-Mat sobelFrameFromGrayScale(Mat frame)
+Mat * sobelFrameFromGrayScale(Mat * frame,Mat * outFrame)
 {
-    Mat resultantMat;
-    try{
-    frame.copyTo(resultantMat);
-    }catch (Exception ex)
-    {
-        cout << "copy Ex" << endl;
-    }
     int photoKernel[9];
-    for(int row=1;row<frame.rows-1;row++)
+    for(int row=1;row<frame->rows-1;row++)
     {
-        for(int col=1;col<frame.cols-1;col++)
+        for(int col=1;col<frame->cols-1;col++)
         {
             //now we have each pixel location, so do the calculation
-            populatePhotoKernel(row-1,col-1,resultantMat,photoKernel);
-            Pixel * current = frame.ptr<Pixel>(row,col);
-            current->x =
-                current->y = 
-                current->z = 
+            populatePhotoKernel(row-1,col-1,*frame,photoKernel);
+            uint8_t * current = (*outFrame).ptr<uint8_t>(row,col);
+            *current = 
                 clamp(
                     VEC_MAG(
                     matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
@@ -115,30 +106,32 @@ Mat sobelFrameFromGrayScale(Mat frame)
 
         }
     }
-    return frame;
+    return outFrame;
 }
 
 
 /**
 * This function is used to grayscale out a frame.
 */
-Mat grayscaleFrame(Mat frame)
+Mat * grayscaleFrame(Mat frame,Mat * grayFrame)
 {
     try{
     frame.forEach<Pixel>([&](Pixel &p, const int * position) ->  void {
         float newC = p.x*BLUE_CONSTANT + p.y*GREEN_CONSTANT + p.z*RED_CONSTANT;
-        p.x = p.y = p.z = newC;
+        Mat grayNotPoint = (*grayFrame);
+        uchar * myPoint = grayNotPoint.ptr<uchar>(position[0],position[1]);
+        *myPoint =(uint8_t)newC;
     });
     }catch (Exception ex)
     {
         cout << "grayscale ex" << endl;
     }
-    return frame;
+    return grayFrame;
 }
 
-Mat sobelFrame(Mat frame)
+Mat * sobelFrame(Mat frame,Mat *outFrame,Mat * grayFrame)
 {
-    return sobelFrameFromGrayScale(grayscaleFrame(frame));
+    return sobelFrameFromGrayScale(grayscaleFrame(frame,grayFrame),outFrame);
 }
 
 /**
@@ -191,7 +184,7 @@ Mat * merge4ToParent(Mat * parent,threadInfo_s * info)
  */
 void * launchThread(void * info)
 {
-    sobelFrame(((threadInfo_s *)info)->frame);
+    sobelFrame(((threadInfo_s *)info)->frame,NULL,NULL);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
     //here we need to combine the rest
     //merge4ToParent(&resultantMat,(threadInfo_s *)info); 
