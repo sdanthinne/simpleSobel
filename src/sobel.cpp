@@ -65,11 +65,12 @@ void startSobel(VideoCapture v)
     {
         pthread_barrier_wait(&sobel_barrier);
         //here, we fill the next frame
-        displayFrameMat(outMat);
+        displayFrameMat(inMat);
         inMat = getFrame(v);
         split4FromParent(inMat,splitMats);
         pthread_barrier_wait(&sobel_barrier);
     }
+    //something strange going on at exit
     for(int i=0;i<THREAD_COUNT;i++)
     {
         if(pthread_join(threads[i],NULL)!=0)
