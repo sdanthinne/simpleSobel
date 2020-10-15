@@ -88,16 +88,16 @@ int clamp(long value,int min,int max)
 
 
 
-Mat * sobelFrameFromGrayScale(Mat * frame,Mat * outFrame)
+Mat sobelFrameFromGrayScale(Mat frame,Mat outFrame)
 {
     int photoKernel[9];
-    for(int row=1;row<frame->rows-1;row++)
+    for(int row=1;row<frame.rows-1;row++)
     {
-        for(int col=1;col<frame->cols-1;col++)
+        for(int col=1;col<frame.cols-1;col++)
         {
             //now we have each pixel location, so do the calculation
-            populatePhotoKernel(row-1,col-1,*frame,photoKernel);
-            uint8_t * current = (*outFrame).ptr<uint8_t>(row,col);
+            populatePhotoKernel(row-1,col-1,frame,photoKernel);
+            uint8_t * current = (outFrame).ptr<uint8_t>(row,col);
             *current = 
                 clamp(
                     VEC_MAG(
@@ -113,25 +113,43 @@ Mat * sobelFrameFromGrayScale(Mat * frame,Mat * outFrame)
 /**
 * This function is used to grayscale out a frame.
 */
-Mat * grayscaleFrame(Mat frame,Mat * grayFrame)
+Mat grayscaleFrame(Mat frame,Mat grayFrame,int thread_number)
 {
-    try{
+
+    pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
+    cout << frame.rows << " x " << frame.cols << endl;
+    uchar * grayPointer;
+    for(int i=0; i<frame.rows;i++)
+    {
+        Pixel * row_ptr = frame.ptr<Pixel>(i);
+        grayPointer = grayFrame.ptr<uchar>(i);
+        for(int j=0; j<frame.cols;j++)
+        {
+            
+            float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
+                                
+            grayPointer[j] =(uint8_t)newC;
+        }
+    }
+    cout << thread_number << endl;
+    imshow("images",grayFrame);
+    waitKey(0);
+
+    pthread_mutex_unlock(&process_mutex);
+    /*try{
     frame.forEach<Pixel>([&](Pixel &p, const int * position) ->  void {
-        float newC = p.x*BLUE_CONSTANT + p.y*GREEN_CONSTANT + p.z*RED_CONSTANT;
         Mat grayNotPoint = (*grayFrame);
-        uchar * myPoint = grayNotPoint.ptr<uchar>(position[0],position[1]);
-        *myPoint =(uint8_t)newC;
     });
     }catch (Exception ex)
     {
         cout << "grayscale ex" << endl;
-    }
+    }*/
     return grayFrame;
 }
 
-Mat * sobelFrame(Mat frame,Mat *outFrame,Mat * grayFrame)
+Mat sobelFrame(Mat frame,Mat outFrame,Mat grayFrame, int thread_number)
 {
-    return sobelFrameFromGrayScale(grayscaleFrame(frame,grayFrame),outFrame);
+    return sobelFrameFromGrayScale(grayscaleFrame(frame,grayFrame,thread_number),outFrame);
 }
 
 /**
@@ -154,37 +172,11 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
 }
 
 /**
- * currently, this takes about 0.03 seconds on my desktop. Not too good.
- */
-Mat * merge4ToParent(Mat * parent,threadInfo_s * info)
-{
-    int colSize = parent->cols/2;
-    int rowSize = parent->rows/2;
-    //not sure how to make a the split images (same memory location?)
-    //index as a total again.
-    //pretty dirty code NGL
-    for(int i=(info->thread_number/2)*rowSize;i<=(info->thread_number/2)*rowSize+rowSize;i++)
-    {
-        for(int j=(info->thread_number%2)*colSize;j<=(info->thread_number%2)*colSize+colSize;j++)
-        {
-            Pixel * p = parent->ptr<Pixel>(i,j);
-            Pixel * newpt = info->frame.ptr<Pixel>(i-(info->thread_number/2)*rowSize,j-(info->thread_number%2)*colSize);
-            *p = *newpt;
-            //p->x=p->y=p->z =  newpt->x;
-            //cout << "assigned" << endl;
-        }
-        
-    }
-    return parent;
-
-}
-
-/**
  * runs on thread PER FRAME to do the processing.
  */
 void * launchThread(void * info)
 {
-    sobelFrame(((threadInfo_s *)info)->frame,NULL,NULL);
+    //sobelFrame(((threadInfo_s *)info)->frame,0,0);
     pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
     //here we need to combine the rest
     //merge4ToParent(&resultantMat,(threadInfo_s *)info); 

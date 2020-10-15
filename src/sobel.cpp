@@ -15,8 +15,10 @@ pthread_attr_t attr;
 int k;//our input key and stop condition
 Mat inMat;
 Mat outFrame;
-//Mat grayFrame;
+Mat grayFrame;
 Mat splitMats[4];
+Mat outSplitMats[4];
+Mat graySplitMats[4];
 pthread_barrier_t sobel_barrier;
 pthread_t threads[THREAD_COUNT];
 
@@ -36,7 +38,11 @@ void * threadedSobel(void * info)
 {
    while(k!='q')
    {
-        sobelFrame(splitMats[((threadInfo_s *)info) -> thread_number],&outFrame,&grayFrame);
+        int thread_num =  ((threadInfo_s *)info) -> thread_number;
+        //waitKey(0);
+        sobelFrame(splitMats[thread_num],
+                outSplitMats[thread_num],
+                graySplitMats[thread_num],thread_num);
         pthread_barrier_wait(&sobel_barrier);//wait for every thread to finish processing
         pthread_barrier_wait(&sobel_barrier);//wait for the parent to give new jobs accordingly
    }
@@ -52,9 +58,15 @@ void startSobel(VideoCapture v)
     setThreadOpt();//set the pthread options
     k=0;//input key
     int ttime = 0;
-    Mat outFrame(Size(inMat.rows,inMat.cols),CV_8UC1);
+    outFrame = Mat(Size(inMat.rows,inMat.cols),CV_8UC1);
 
-    Mat grayFrame(Size(inMat.rows,inMat.cols),CV_8UC1);
+    grayFrame = Mat(Size(inMat.rows,inMat.cols),CV_8UC1);
+
+    split4FromParent(outFrame,outSplitMats);
+
+    split4FromParent(grayFrame,graySplitMats);
+    //displayFrameMat(grayFrame);
+    //waitKey(2000);
 
     threadInfo_s thread_infos[4];
     //launch the pthreads
@@ -67,13 +79,13 @@ void startSobel(VideoCapture v)
             return;
         }
     }
-    while((k=waitKey(1))!='q')
+    while((k=waitKey(0))!='q')
     {
 	ttime = clock();
         pthread_barrier_wait(&sobel_barrier);
 	cout << "time to sobel: " << ((float)(clock()-ttime))/CLOCKS_PER_SEC << "s" <<endl;
         //here, we fill the next frame
-        displayFrameMat(outFrame);
+        displayFrameMat(grayFrame);
         inMat = getFrame(v);
         split4FromParent(inMat,splitMats);
         pthread_barrier_wait(&sobel_barrier);

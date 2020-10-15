@@ -36,6 +36,8 @@ void displayFrame(VideoCapture v)
 */
 void displayFrameMat(Mat frame)
 {
+    namedWindow(WINDOW_NAME,WINDOW_NORMAL);
+    cout << frame.cols << " x " << frame.rows << endl;
     imshow(WINDOW_NAME,frame);
     resizeWindow(WINDOW_NAME,600,600);
 }
