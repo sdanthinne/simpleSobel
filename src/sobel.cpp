@@ -58,9 +58,9 @@ void startSobel(VideoCapture v)
     setThreadOpt();//set the pthread options
     k=0;//input key
     int ttime = 0;
-    outFrame = Mat(Size(inMat.rows,inMat.cols),CV_8UC1);
+    outFrame = Mat(Size(inMat.cols,inMat.rows),CV_8UC1);
 
-    grayFrame = Mat(Size(inMat.rows,inMat.cols),CV_8UC1);
+    grayFrame = Mat(Size(inMat.cols,inMat.rows),CV_8UC1);
 
     split4FromParent(outFrame,outSplitMats);
 
@@ -79,13 +79,13 @@ void startSobel(VideoCapture v)
             return;
         }
     }
-    while((k=waitKey(0))!='q')
+    while((k=waitKey(1))!='q')
     {
 	ttime = clock();
         pthread_barrier_wait(&sobel_barrier);
 	cout << "time to sobel: " << ((float)(clock()-ttime))/CLOCKS_PER_SEC << "s" <<endl;
         //here, we fill the next frame
-        displayFrameMat(grayFrame);
+        displayFrameMat(outFrame);
         inMat = getFrame(v);
         split4FromParent(inMat,splitMats);
         pthread_barrier_wait(&sobel_barrier);

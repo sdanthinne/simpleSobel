@@ -116,8 +116,6 @@ Mat sobelFrameFromGrayScale(Mat frame,Mat outFrame)
 Mat grayscaleFrame(Mat frame,Mat grayFrame,int thread_number)
 {
 
-    pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
-    cout << frame.rows << " x " << frame.cols << endl;
     uchar * grayPointer;
     for(int i=0; i<frame.rows;i++)
     {
@@ -132,10 +130,7 @@ Mat grayscaleFrame(Mat frame,Mat grayFrame,int thread_number)
         }
     }
     cout << thread_number << endl;
-    imshow("images",grayFrame);
-    waitKey(0);
 
-    pthread_mutex_unlock(&process_mutex);
     /*try{
     frame.forEach<Pixel>([&](Pixel &p, const int * position) ->  void {
         Mat grayNotPoint = (*grayFrame);
