@@ -129,7 +129,6 @@ Mat grayscaleFrame(Mat frame,Mat grayFrame,int thread_number)
             grayPointer[j] =(uint8_t)newC;
         }
     }
-    cout << thread_number << endl;
 
     /*try{
     frame.forEach<Pixel>([&](Pixel &p, const int * position) ->  void {
