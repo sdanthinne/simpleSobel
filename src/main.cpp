@@ -1,3 +1,5 @@
+#include "sobel.hpp"
+
 #include "reader.hpp"
 #include <iostream>
 #include <unistd.h>
