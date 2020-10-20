@@ -1,3 +1,11 @@
+/*****************************************************************************
+ * File: reader.cpp
+ *
+ * Description: This file has functions to display the sobel frame and to
+ *     get the next frame out of the video. 
+ *
+ * Author: Sebastien Danthinne and Erin Rylie Clark
+ * ***************************************************************************/
 #include "reader.hpp"
 #include <ctime>
 #include "sobel.hpp"
@@ -6,34 +14,17 @@
 using namespace std;
 using namespace cv;
 
+/* Global variable for getting frame from video */
 Mat getFrame(VideoCapture v);
 
-void displayFrame(VideoCapture v)
-{
-    /*int key=0;
-    Mat currFrame = getFrame(v);
-    namedWindow(WINDOW_NAME, WINDOW_NORMAL);
-    while(key!='q')
-    {
-        imshow(WINDOW_NAME,currFrame);
-        resizeWindow(WINDOW_NAME,600,600);
-        int time_init = clock();
-        currFrame = sobel(getFrame(v));
-        time_init = clock()-time_init;
-        cout << "next frame loaded in: " << (float)time_init/CLOCKS_PER_SEC << "s" << endl;
-        if((key=waitKey(1))=='q')
-        {
-            //quit
-            destroyAllWindows();
-            break;
-        } 
-    }*/
-    startSobel(v);
-}
-
-/**
-* Just opens a window and displays a frame. Nothing much
-*/
+/*------------------------------------------------------------------------------
+ * Function: displayFrameMat
+ * Description: this function takes in the frame with the sobel filter already
+ *     applied, creats a window to display it in, and displays it.
+ *     We also currently have this function printing out the resolution of the
+ *     frame.
+ * param: frame - the Mat object containing the frame to display
+ * -----------------------------------------------------------------------------*/
 void displayFrameMat(Mat frame)
 {
     namedWindow(WINDOW_NAME,WINDOW_NORMAL);
@@ -42,33 +33,16 @@ void displayFrameMat(Mat frame)
     resizeWindow(WINDOW_NAME,600,600);
 }
 
-Mat readImage(std::string fileName)
-{
-   return imread(fileName,IMREAD_COLOR);
-}
-
-void createDisplayFrame()
-{
-   namedWindow(WINDOW_NAME, WINDOW_NORMAL);
-   waitKey(0);
-}
-
-VideoCapture readVideo(std::string fileName)
-{
-   VideoCapture v = VideoCapture(fileName);
-   //if(!v.open(fileName,4)){
-   //   cerr << "there was a problem with opening the video file" << endl;
-   //}
-   return v;
-}
-
-/**
- * gets the next available frame from a VC
- */
-
+/*------------------------------------------------------------------------------
+ * Function: getFrame 
+ * Description: this function just takes in the video, grabs the next frame, and
+ *     returns a Mat object containing that frame
+ * param: video - the video to get the frame from
+ * return: m - the Mat object containing the frame to be returned
+ * -----------------------------------------------------------------------------*/
 Mat getFrame(VideoCapture video)
 {
    Mat m;
-   video >> m;
+   video >> m; /* Get the next frame available */
    return m;
 }

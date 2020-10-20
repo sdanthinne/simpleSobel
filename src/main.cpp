@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     cv::VideoCapture video = readVideo(videoTitle);
     if(video.isOpened())
     {
-        displayFrame(video);
+        startSobel(video);
     }
     return 0;
 }
