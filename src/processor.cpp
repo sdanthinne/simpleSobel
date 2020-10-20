@@ -1,9 +1,19 @@
+/**
+ * File: processor.cpp
+ *
+ * Description: Contains all functions relating to the processing of each Mat/SubMat for a 
+ * sobel algorithm.
+ *
+ * Author: Erin Clark and Sebastien Danthinne
+ *
+ * Revisions:
+ * 
+ */
 #include "processor.hpp"
 #include <iostream>
 #include <limits.h>
 #include <math.h>
 #include <pthread.h>
-//#include <mutex>
 
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
@@ -16,16 +26,9 @@
 #define DIVISOR 4
 
 //a vector magnitude approximation based on the max and min vector lengths. 
-//for more accuracy, multiplying result by 15/16 would work
 #define VEC_MAG(A,B)\
     ((A) > (B)) ? 15*((A) + ((B)>>1))/16 : 15*((B) + ((A)>>1))/16
-/**
-*Implementation of threads - I think we want to spawn threads, 
-* perform sobel on the a section of the image with size around the l1 (per core) (32KB) (faster memory access)
-* cache. We need to be able to calculate convolutions on every pixel, so actual selection will 
-* overlap with other threads' selections (border pixel conv. not calculated, overlap takes care of it)
-* 
-*/
+
 
 using namespace cv;
 using namespace std;
@@ -38,16 +41,16 @@ pthread_t thread[DIVISOR];
 pthread_mutex_t process_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat resultantMat;
 
-//struct is passed through to each thread.
-//struct threadInfo_s
-//{
- //   int thread_number;
-  //  Mat frame;
-//};
-
-/**
- * performs the actual multiplication
- */
+/*-----------------------------------------------------------------------------
+ * Function: matValMult
+ *
+ * Description: performs the actual multiplication of two 1d KERNEL_SIZE arrays
+ *
+ * array1[]: int []: first array being multiplied
+ * array2[]: int []: second array being multiplied
+ *
+ * return: long: sum of the product of the two arrays
+ *---------------------------------------------------------------------------*/
 long matValMult(int array1[], int array2[])
 {
     long resultant=0;
@@ -58,45 +61,76 @@ long matValMult(int array1[], int array2[])
     return resultant;
 }
 
-/**
- * populates the photo kernel from the frame around the top left
- * COULD BE SOURCE OF MEMORY OVER WRITE
- */
+/*-----------------------------------------------------------------------------
+ * Function: populatePhotoKernel
+ *
+ * Description: Populates the photo kernel of size KERNEL_SIZE from the 
+ *  top-right with col and row as the x and y coordinates of the top-right 
+ *  of the resultant array
+ *
+ * row: int : the reference y value of where the kernel should start
+ * col: int : the reference x value of where the kernel should start
+ * frame: cv::Mat : the frame in which to pull the values from
+ * photoKernel: int * : the reference to a KERNEL_SIZE array where the 
+ *  resultant pixels will be populated
+ *
+ * return: void:
+ *---------------------------------------------------------------------------*/
 void populatePhotoKernel(int row, int col, Mat frame,int * photoKernel)
 {
     for(int i=0;i<KERNEL_SIDE;i++)
     {
-        //this I think is slow. 
-        //May need performance optimization in the future.
+        //Describes 
         uint8_t * selected = frame.ptr<uint8_t>(
                 row+i,
                 col);
 
-        //photoKernel[i] = selected.x;
-
-        //(centerCol>frame.cols+)
         photoKernel[i*3] = selected[0];
         photoKernel[i*3+1] = selected[1];
         photoKernel[i*3+2] = selected[2];
     }
 }
 
+/*-----------------------------------------------------------------------------
+ * Function: clamp
+ *
+ * Description: clamps the value within the min and max values 
+ *  (supports up to int sizes)
+ *
+ * value: long: the value that needs to be clamped
+ * min: int: the min value of the clamp
+ * max: int: the max value of the clamp
+ *
+ * return: int: the clamped value
+ *---------------------------------------------------------------------------*/
 int clamp(long value,int min,int max)
 {
     return (value>max)? max : (value < min) ? min : value;
 }
 
 
-
-Mat sobelFrameFromGrayScale(Mat frame,Mat outFrame)
+/*-----------------------------------------------------------------------------
+ * Function: sobelFrameFromGrayScale
+ *
+ * Description: performs a sobel filter on the frame inFrame and places it in 
+ *  the outFrame. outFrame MUST already have memory allocated for the Mat value
+ *  (assumes that the input frame is already grayscale)
+ *
+ * inFrame: cv::Mat: the input frame for the filter to be applied
+ * outFrame: cv::Mat: the output frame for which the resulting filtered frame
+ *  will be put. Should already have memory allocated for it.
+ *
+ * return: cv::Mat: the same reference to outFrame
+ *---------------------------------------------------------------------------*/
+Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
 {
     int photoKernel[9];
-    for(int row=1;row<frame.rows-1;row++)
+    for(int row=1;row<inFrame.rows-1;row++)
     {
-        for(int col=1;col<frame.cols-1;col++)
+        for(int col=1;col<inFrame.cols-1;col++)
         {
             //now we have each pixel location, so do the calculation
-            populatePhotoKernel(row-1,col-1,frame,photoKernel);
+            populatePhotoKernel(row-1,col-1,inFrame,photoKernel);
             uint8_t * current = (outFrame).ptr<uint8_t>(row,col);
             *current = 
                 clamp(
@@ -110,18 +144,27 @@ Mat sobelFrameFromGrayScale(Mat frame,Mat outFrame)
 }
 
 
-/**
-* This function is used to grayscale out a frame.
-*/
-Mat grayscaleFrame(Mat frame,Mat grayFrame,int thread_number)
+/*-----------------------------------------------------------------------------
+ * Function: grayscaleFrame
+ *
+ * Description: performs a grayscale filter on the inFrame and applies it 
+ *  to the grayFrame
+ *
+ * inFrame: cv::Mat: the input frame for the filter to be applied
+ * grayFrame: cv::Mat: the output frame for which the resulting filtered frame
+ *  will be put. Should already have memory allocated for it.
+ *
+ * return: cv::Mat: the same reference to grayFrame
+ *---------------------------------------------------------------------------*/
+Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
 {
 
     uchar * grayPointer;
-    for(int i=0; i<frame.rows;i++)
+    for(int i=0; i<inFrame.rows;i++)
     {
-        Pixel * row_ptr = frame.ptr<Pixel>(i);
+        Pixel * row_ptr = inFrame.ptr<Pixel>(i);
         grayPointer = grayFrame.ptr<uchar>(i);
-        for(int j=0; j<frame.cols;j++)
+        for(int j=0; j<inFrame.cols;j++)
         {
             
             float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
@@ -129,30 +172,41 @@ Mat grayscaleFrame(Mat frame,Mat grayFrame,int thread_number)
             grayPointer[j] =(uint8_t)newC;
         }
     }
-    cout << thread_number << endl;
-
-    /*try{
-    frame.forEach<Pixel>([&](Pixel &p, const int * position) ->  void {
-        Mat grayNotPoint = (*grayFrame);
-    });
-    }catch (Exception ex)
-    {
-        cout << "grayscale ex" << endl;
-    }*/
     return grayFrame;
 }
 
-Mat sobelFrame(Mat frame,Mat outFrame,Mat grayFrame, int thread_number)
+/*-----------------------------------------------------------------------------
+ * Function: sobelFrame
+ *
+ * Description: performs a complete sobel filter on a given frame from color
+ *
+ * inFrame: cv::Mat: the input frame for the filter to be applied
+ * outFrame: cv::Mat: the output frame for which the resulting filtered frame
+ *  will be put. Should already have memory allocated for it.
+ * grayFrame: cv::Mat: the grayscale intermidiate frame for which the resulting
+ *  grayscale'd frame will reside. Should already have memory allocated for it.
+ *
+ * return: cv::Mat: the same reference to outFrame
+ *---------------------------------------------------------------------------*/
+Mat sobelFrame(Mat inFrame,Mat outFrame,Mat grayFrame)
 {
-    return sobelFrameFromGrayScale(grayscaleFrame(frame,grayFrame,thread_number),outFrame);
+    return sobelFrameFromGrayScale(grayscaleFrame(inFrame,grayFrame),outFrame);
 }
 
-/**
- * divides parent mat into quadrants with overlap=2px
- * (assumes that video sizes are even.)
- * [0,1]
- * [2,3]
- */
+/*-----------------------------------------------------------------------------
+ * Function: split4FromParent
+ *
+ * Description: splits a parent mat into quadrants with a 2px overlap of each.
+ *  Assumes that video sizes are even. Order is as follows:
+ *  [0,1]
+ *  [2,3]
+ *
+ * parent: cv::Mat: the Mat to be split up into children
+ * matCollection: cv::Mat*: a reference to an array of 4 Mat objects to be 
+ *  populated with sub-Mats of the parent
+ *
+ * return: cv::Mat: the pointer to the first element of the 4 array
+ *---------------------------------------------------------------------------*/
 Mat * split4FromParent(Mat parent,Mat * matCollection)
 {
     int colSize = parent.cols/2;
@@ -164,67 +218,4 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
     matCollection[3] = parent(Range(rowSize-1,parent.rows),Range(colSize-1,parent.cols));
     return matCollection;
 
-}
-
-/**
- * runs on thread PER FRAME to do the processing.
- */
-void * launchThread(void * info)
-{
-    //sobelFrame(((threadInfo_s *)info)->frame,0,0);
-    pthread_mutex_lock(&process_mutex);//we finished processing, write to the global obj
-    //here we need to combine the rest
-    //merge4ToParent(&resultantMat,(threadInfo_s *)info); 
-    //cout << "resultSize: " << resultant.rows << "x"<< resultant.cols << endl;
-    //((threadInfo_s *)info)->frame.copyTo(resultantMat);
-    pthread_mutex_unlock(&process_mutex);
-}
-
-
-
-/**
- * Creates a sobel calculated frame from a grayscale image. 
- * for threading, it might be worth getting the grayscale calculation at the same time as the sobel calculation.
- */
-Mat threadedSobelFrame(Mat frame)
-{
-
-    Mat matCollection[DIVISOR];
-    split4FromParent(frame,matCollection);
-    threadInfo_s info[DIVISOR];
-    //slow, might just copy mat size
-    frame.copyTo(resultantMat);
-    void * threadStatus[DIVISOR];
-    //following lines NEED TO BE MOVED
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);//make threads joinable
-
-    //populate the threadInfo struct
-    for(int i=0; i<DIVISOR;i++)
-    {
-        info[i].frame = matCollection[i];
-        info[i].thread_number = i;
-        
-    }
-    for(int i=0;i<DIVISOR;i++)
-    {
-        pthread_create(&thread[i],&attr,launchThread,(void *)&info[i]);
-    }
-    for(int i=0;i<DIVISOR;i++)
-    {
-        pthread_join(thread[i],&threadStatus[i]);
-    }
-    return frame;
-}
-
-/**
-* Performs a sobel filter on a Mat frame
-*/
-Mat sobel(Mat frame)
-{   
-    
-    cout << frame.rows << " x " << frame.cols << endl;
-    return threadedSobelFrame(frame);
-    //return sobelFrameFromGrayScale(grayscaleFrame(frame));
 }
