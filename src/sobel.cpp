@@ -5,6 +5,7 @@
 #include "reader.hpp"
 #include "processor.hpp"
 #include <pthread.h>
+#include <signal.h>
 #include <ctime>
 #define THREAD_COUNT 4
 
@@ -21,11 +22,28 @@ Mat outSplitMats[4];
 Mat graySplitMats[4];
 pthread_barrier_t sobel_barrier;
 pthread_t threads[THREAD_COUNT];
+double averageTime;
+int numRounds;
 
+double approxRollingAverage (double avg, double new_sample,int rnumRounds) {
+
+    avg -= avg / rnumRounds;
+    avg += new_sample / rnumRounds;
+
+    return avg;
+}
+
+void intHandler(int n)
+{
+    cout << "Average time for frame processing was: " << averageTime << endl;
+    exit(0);
+
+}
 
 void setThreadOpt()
 {
     pthread_attr_init(&attr);
+    signal(SIGINT,intHandler);
     //Maybe unnecessary to have the re-joiable?
     pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE);
     pthread_barrier_init(&sobel_barrier,NULL,THREAD_COUNT+1);
@@ -57,7 +75,9 @@ void startSobel(VideoCapture v)
     split4FromParent(inMat,splitMats);
     setThreadOpt();//set the pthread options
     k=0;//input key
-    int ttime = 0;
+    double ttime = 0;
+    averageTime = 40;
+    numRounds = 1;
     outFrame = Mat(Size(inMat.cols,inMat.rows),CV_8UC1);
 
     grayFrame = Mat(Size(inMat.cols,inMat.rows),CV_8UC1);
@@ -83,7 +103,9 @@ void startSobel(VideoCapture v)
     {
 	ttime = clock();
         pthread_barrier_wait(&sobel_barrier);
-	cout << "time to sobel: " << ((float)(clock()-ttime))/CLOCKS_PER_SEC << "s" <<endl;
+	ttime = ((float)(clock()-ttime))/CLOCKS_PER_SEC;
+	cout << "time to sobel: " << ttime << "s" <<endl;
+	averageTime = approxRollingAverage(averageTime,ttime,numRounds++);
         //here, we fill the next frame
         displayFrameMat(outFrame);
         inMat = getFrame(v);
