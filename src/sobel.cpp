@@ -65,7 +65,7 @@ void * threadedSobel(void * info)
         //waitKey(0);
         sobelFrame(splitMats[thread_num],
                 outSplitMats[thread_num],
-                graySplitMats[thread_num],thread_num);
+                graySplitMats[thread_num]);
         pthread_barrier_wait(&sobel_barrier);
 	    /* wait for every thread to finish processing */
         pthread_barrier_wait(&sobel_barrier);

@@ -1,9 +1,10 @@
 #include "sobel.hpp"
-
+#include <opencv2/videoio.hpp>
 #include "reader.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <pthread.h>
+#include <opencv2/opencv.hpp>
 #define NUMTHREADS 2
 #define ROUNDS 2
 using namespace std;
@@ -27,7 +28,7 @@ int main(int argc, char** argv)
     {
         return 1;
     }
-    cv::VideoCapture video = readVideo(videoTitle);
+    cv::VideoCapture video(videoTitle);
     if(video.isOpened())
     {
         startSobel(video);
