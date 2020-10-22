@@ -33,8 +33,8 @@
 using namespace cv;
 using namespace std;
 
-int x_kernel[] = X_KERNEL;
-int y_kernel[] = Y_KERNEL;
+int16_t x_kernel[] = X_KERNEL;
+int16_t y_kernel[] = Y_KERNEL;
 
 Mat threadFrame[DIVISOR];
 pthread_t thread[DIVISOR];
@@ -51,13 +51,22 @@ Mat resultantMat;
  *
  * return: long: sum of the product of the two arrays
  *---------------------------------------------------------------------------*/
-long matValMult(int array1[], int array2[])
+int matValMult(int16_t array1[], int16_t array2[])
 {
-    long resultant=0;
-    for(int i=0; i<KERNEL_SIZE;i++)
+    int resultant=0;
+    int16_t arrayR[9];
+    int16x8_t v1, v2, vR;
+
+    v1 = vld1q_s16(array1);
+    v2 = vld1q_s16(array2);
+    vR = vmulq_s16(v1,v2);
+    vst1q_s16(arrayR,vR);
+
+    for(int i=0; i<KERNEL_SIZE-1;i++)
     {
-        resultant += array1[i] * array2[i];
+        resultant += arrayR[i];
     }
+    resultant += array1[8]*array2[8];
     return resultant;
 }
 
@@ -76,7 +85,7 @@ long matValMult(int array1[], int array2[])
  *
  * return: void:
  *---------------------------------------------------------------------------*/
-void populatePhotoKernel(int row, int col, Mat frame,int * photoKernel)
+void populatePhotoKernel(int row, int col, Mat frame,int16_t * photoKernel)
 {
     for(int i=0;i<KERNEL_SIDE;i++)
     {
@@ -124,7 +133,7 @@ int clamp(long value,int min,int max)
  *---------------------------------------------------------------------------*/
 Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
 {
-    int photoKernel[9];
+    int16_t photoKernel[9];
     for(int row=1;row<inFrame.rows-1;row++)
     {
         for(int col=1;col<inFrame.cols-1;col++)
