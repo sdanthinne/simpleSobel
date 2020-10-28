@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <math.h>
 #include <pthread.h>
+#include <arm_neon.h>
 
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
@@ -40,6 +41,9 @@ Mat threadFrame[DIVISOR];
 pthread_t thread[DIVISOR];
 pthread_mutex_t process_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat resultantMat;
+
+
+void grayScaleRowNEON(Pixel * start,uchar* grayPointer);
 
 /*-----------------------------------------------------------------------------
  * Function: matValMult
@@ -173,15 +177,59 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
     {
         Pixel * row_ptr = inFrame.ptr<Pixel>(i);
         grayPointer = grayFrame.ptr<uchar>(i);
-        for(int j=0; j<inFrame.cols;j++)
+        for(int j=0; j<inFrame.cols;j+=4)
         {
-            
-            float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
+            grayScaleRowNEON(&row_ptr[j],&grayPointer[j]);
+            //float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
                                 
-            grayPointer[j] =(uint8_t)newC;
+            //grayPointer[j] =(uint8_t)newC;
         }
     }
     return grayFrame;
+}
+
+/*-----------------------------------------------------------------------------
+ * Function: grayScaleRowNEON
+ * 
+ * Description: takes the next 4 values and grayscales them all at once
+ */
+void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
+{
+    float32x4_t constant;
+    uint8x8x3_t vI;
+
+    uint32x4_t vPF;
+    float32x4_t rvF,gvF,bvF;
+    //constant = vdupq_n_f32(rgbToGrayScale[i]);
+
+    vI = vld3_u8((uint8_t *)(start));
+
+    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[0]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(red
+    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[1]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(green
+    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[2]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
+
+
+    //vF = vcvtq_f32_u32(vPF);
+    
+    rvF = vmulq_n_f32(rvF,RED_CONSTANT);
+    gvF = vmulq_n_f32(gvF,GREEN_CONSTANT);
+    bvF = vmulq_n_f32(bvF,BLUE_CONSTANT);
+
+    rvF = vaddq_f32(rvF,gvF);
+    rvF = vaddq_f32(rvF,bvF);
+
+    uint16x4_t out = vmovn_u32(vcvtq_u32_f32(rvF));//16x4
+    
+    //need a better solution than this
+    grayPointer[0] = vget_lane_u16(out,0);
+    grayPointer[1] = vget_lane_u16(out,1);
+    grayPointer[2] = vget_lane_u16(out,2);
+    grayPointer[3] = vget_lane_u16(out,3);
+    vst1_u8(grayPointer
+
+    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4
+    
+
 }
 
 /*-----------------------------------------------------------------------------
