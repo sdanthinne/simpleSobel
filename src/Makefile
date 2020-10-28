@@ -1,7 +1,7 @@
 TARGET   = runMe
-CC       = g++-10.1
-CCFLAGS  =  -Wall -O0 `pkg-config --cflags opencv` -lpthread -mfpu=neon -mcpu=Cortex-A8 -ggdb
-LDFLAGS  = -lm `pkg-config  --libs --cflags opencv` -lpthread -ggdb
+CC       = g++
+CCFLAGS  =  -Wall -O0 `pkg-config --cflags opencv` -lpthread -mfpu=neon -mcpu=Cortex-A8 -pg
+LDFLAGS  = -lm `pkg-config  --libs --cflags opencv` -lpthread -pg
 SOURCES  = $(wildcard *.cpp)
 INCLUDES = $(wildcard *.hpp)
 OBJDIR   = ../obj/
@@ -24,3 +24,11 @@ clean:
 .PHONY: debug
 debug: 
 		gdb --args ./$(TARGET) ../res/test3.avi
+
+.PHONY: perf
+perf:
+		$(CC) -c $(CCFLAGS) -pg $(SOURCES)
+		$(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS) -pg $(INCLUDES)
+		./$(TARGET) $(args)
+		gprof $(TARGET) > $(TARGET).output
+		
