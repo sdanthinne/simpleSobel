@@ -177,7 +177,7 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
     {
         Pixel * row_ptr = inFrame.ptr<Pixel>(i);
         grayPointer = grayFrame.ptr<uchar>(i);
-        for(int j=0; j<inFrame.cols;j+=4)
+        for(int j=0; j<inFrame.cols-1;j+=8)
         {
             grayScaleRowNEON(&row_ptr[j],&grayPointer[j]);
             //float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
@@ -195,19 +195,43 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
  */
 void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
 {
-    float32x4_t constant;
+    //new integer operation
+    uint16x8_t rvF,gvF,bvF;
     uint8x8x3_t vI;
+    #define RMUL 54
+    #define GMUL 183
+    #define BMUL 18
+    #define RGBDIVSHIFT 8
 
-    uint32x4_t vPF;
+    vI = vld3_u8((uint8_t *)(start));
+    rvF = vmovl_u8(vI.val[0]);//u16x8
+    rvF = vmulq_n_u16(rvF,RMUL);
+    rvF = vshrq_n_u16(rvF,RGBDIVSHIFT);
+
+    gvF = vmovl_u8(vI.val[1]);//u16x8
+    gvF = vmulq_n_u16(gvF,GMUL);
+    gvF = vshrq_n_u16(gvF,RGBDIVSHIFT);
+
+    bvF = vmovl_u8(vI.val[2]);//u16x8
+    bvF = vmulq_n_u16(bvF,BMUL);
+    bvF = vshrq_n_u16(bvF,RGBDIVSHIFT);
+
+    
+    rvF = vaddq_u16(rvF,gvF);
+    rvF = vaddq_u16(rvF,bvF);
+    
+    vst1_u8(grayPointer,vmovn_u16(rvF));
+    //old FP operation
+    /*uint8x8x3_t vI;
+
     float32x4_t rvF,gvF,bvF;
-    //constant = vdupq_n_f32(rgbToGrayScale[i]);
 
     vI = vld3_u8((uint8_t *)(start));
 
-    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[0]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(red
-    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[1]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(green
-    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[2]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
-
+    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[0]))));
+    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[1]))));
+    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[2]))));
+    //this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
 
     //vF = vcvtq_f32_u32(vPF);
     
@@ -225,9 +249,8 @@ void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
     grayPointer[1] = vget_lane_u16(out,1);
     grayPointer[2] = vget_lane_u16(out,2);
     grayPointer[3] = vget_lane_u16(out,3);
-    vst1_u8(grayPointer
 
-    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4
+    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4*/
     
 
 }
