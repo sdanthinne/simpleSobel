@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <math.h>
 #include <pthread.h>
+#include <arm_neon.h>
 
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
@@ -33,8 +34,9 @@
 using namespace cv;
 using namespace std;
 
-int x_kernel[] = X_KERNEL;
-int y_kernel[] = Y_KERNEL;
+
+int8_t x_kernel[] = X_KERNEL;
+int8_t y_kernel[] = Y_KERNEL;
 
 Mat threadFrame[DIVISOR];
 pthread_t thread[DIVISOR];
@@ -51,12 +53,24 @@ Mat resultantMat;
  *
  * return: long: sum of the product of the two arrays
  *---------------------------------------------------------------------------*/
-long matValMult(int array1[], int array2[])
+
+int matValMult(int8_t array1[], int8_t array2[])
 {
-    long resultant=0;
+    int resultant=0;
+    int8_t arrayR[9];
+    int8x16_t v1, v2;
+    v1 = vld1q_s8(array1);
+    v2 = vld1q_s8(array2);
+    v2 = vmulq_s8(v1,v2);
+    
+    //temp1 = vget_low_s8(vR);
+    //temp2 = vget_high_s8(vR);
+    //temp3 = vadd_s8(temp1,temp2);//after this we now have a 8x8 that has it added together
+    vst1q_s8(arrayR,v2);
+
     for(int i=0; i<KERNEL_SIZE;i++)
     {
-        resultant += array1[i] * array2[i];
+        resultant += arrayR[i];
     }
     return resultant;
 }
@@ -76,7 +90,8 @@ long matValMult(int array1[], int array2[])
  *
  * return: void:
  *---------------------------------------------------------------------------*/
-void populatePhotoKernel(int row, int col, Mat frame,int * photoKernel)
+
+void populatePhotoKernel(int row, int col, Mat frame,int8_t * photoKernel)
 {
     for(int i=0;i<KERNEL_SIDE;i++)
     {
@@ -124,7 +139,8 @@ int clamp(long value,int min,int max)
  *---------------------------------------------------------------------------*/
 Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
 {
-    int photoKernel[9];
+
+    int8_t photoKernel[9];
     for(int row=1;row<inFrame.rows-1;row++)
     {
         for(int col=1;col<inFrame.cols-1;col++)
@@ -164,15 +180,64 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
     {
         Pixel * row_ptr = inFrame.ptr<Pixel>(i);
         grayPointer = grayFrame.ptr<uchar>(i);
+
+        int counter=0;
         for(int j=0; j<inFrame.cols;j++)
         {
             
             float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
                                 
             grayPointer[j] =(uint8_t)newC;
+
+            //counter++;
         }
+
     }
     return grayFrame;
+}
+
+
+/*-----------------------------------------------------------------------------
+ * Function: grayScaleRowNEON
+ * 
+ * Description: takes the next 4 values and grayscales them all at once
+ */
+void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
+{
+    float32x4_t constant;
+    uint8x8x3_t vI;
+
+    uint32x4_t vPF;
+    float32x4_t rvF,gvF,bvF;
+    //constant = vdupq_n_f32(rgbToGrayScale[i]);
+
+    vI = vld3_u8((uint8_t *)(start));
+
+    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u8(vmovl_u8(vI.val[0]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(red
+    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u8(vmovl_u8(vI.val[1]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(green
+    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u8(vmovl_u8(vI.val[2]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
+
+
+    //vF = vcvtq_f32_u32(vPF);
+    
+    rvF = vmulq_n_f32(rvF,RED_CONSTANT);
+    gvF = vmulq_n_f32(gvF,GREEN_CONSTANT);
+    bvF = vmulq_n_f32(bvF,BLUE_CONSTANT);
+
+    rvF = vaddq_f32(rvF,gvF);
+    rvF = vaddq_f32(rvF,bvF);
+
+    uint16x4_t out = vmovn_u32(vcvtq_u32_f32(rvF));//16x4
+    
+    //need a better solution than this
+    grayPointer[0] = vget_lane_u16(out,0);
+    grayPointer[1] = vget_lane_u16(out,1);
+    grayPointer[2] = vget_lane_u16(out,2);
+    grayPointer[3] = vget_lane_u16(out,3);
+
+    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4
+    
+
 }
 
 /*-----------------------------------------------------------------------------
