@@ -132,19 +132,21 @@ void startSobel(VideoCapture v)
         /* Now display the frame and give each thread a new frame */
         displayFrameMat(outFrame); /* Display sobel frame */
         inMat = getFrame(v); /* Get the next frame in the video */
+        if(inMat.empty())
+            break;
         split4FromParent(inMat,splitMats); /* split the frame into quads */
         pthread_barrier_wait(&sobel_barrier); /* Allow the threads to work */
     }
     /* Join the threads back together when the video is done, or the user
      * presses q to quit */
-    for(int i=0;i<THREAD_COUNT;i++)
+    /*for(int i=0;i<THREAD_COUNT;i++)
     {
         if(pthread_join(threads[i],NULL)!=0)
         {
             cerr << "problem joining threads" << endl;
             return;
         }
-    }
+    }*/
     /* Destroy the threads when done */
-    pthread_barrier_destroy(&sobel_barrier);
+    //pthread_barrier_destroy(&sobel_barrier);
 }

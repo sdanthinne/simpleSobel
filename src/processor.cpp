@@ -59,12 +59,12 @@ int matValMult(int16_t array1[], int16_t array2[])
 {
     int resultant=0;
     int16_t arrayR[9];
-    int16x8_t v1, v2, vR;
+    int16x8_t v1, v2;
 
     v1 = vld1q_s16(array1);
     v2 = vld1q_s16(array2);
-    vR = vmulq_s16(v1,v2);
-    vst1q_s16(arrayR,vR);
+    v1 = vmulq_s16(v1,v2);
+    vst1q_s16(arrayR,v1);
 
     for(int i=0; i<KERNEL_SIZE-1;i++)
     {
