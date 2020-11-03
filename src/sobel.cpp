@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <signal.h>
 #include <ctime>
+#include <perfmon/pfmlib.h>
+
 #define THREAD_COUNT 4
 
 using namespace cv;
@@ -28,7 +30,7 @@ pthread_barrier_t sobel_barrier;
 pthread_t threads[THREAD_COUNT];
 double averageTime;
 int numRounds;
-
+pthread_mutex_t lock; 
 /* Calculate the average time to compute sobel filter */
 double approxRollingAverage (double avg, double new_sample,int rnumRounds) {
     avg -= avg / rnumRounds;
@@ -59,13 +61,49 @@ void setThreadOpt() /* Set to run the final function on exit */
  * -----------------------------------------------------------------------------*/
 void * threadedSobel(void * info)
 {
+
+    pfm_pmu_encode_arg_t raw;
+    memset(&raw,0,sizeof(raw));
+
+    if(pfm_initialize()!=PFM_SUCCESS)
+    {
+        pthread_mutex_lock(&lock);
+        cout << "init PFM failed" << endl;
+        pthread_mutex_unlock(&lock); 
+    }
+     
+
+
    while(k!='q')
    {
+        //int thread_info = pfm_get_event_attr_info(int idx, int attr, PFM_OS_PERF_EVENT, &info);
+
+
+        int ret = pfm_get_os_event_encoding("CPU_CYCLES",PFM_PLM0,PFM_OS_NONE,&raw);
+        if(ret != PFM_SUCCESS)
+        {
+            cout<< "bad event get" << endl;
+        }
+        uint64_t cycles = raw.codes[0];
+
         int thread_num =  *((int *)info);
-        //waitKey(0);
+
         sobelFrame(splitMats[thread_num],
                 outSplitMats[thread_num],
                 graySplitMats[thread_num]);
+
+        memset(&raw,0,sizeof(raw));
+        ret = pfm_get_os_event_encoding("CPU_CYCLES",PFM_PLM0,PFM_OS_NONE,&raw);
+        if(ret != PFM_SUCCESS)
+        {
+            cout<< "bad event get" << endl;
+        }
+        cycles = raw.codes[0] - cycles;
+
+        pthread_mutex_lock(&lock);
+        cout << "number of cycles for quadrant: " << cycles << endl;
+        pthread_mutex_unlock(&lock);
+
         pthread_barrier_wait(&sobel_barrier);
 	    /* wait for every thread to finish processing */
         pthread_barrier_wait(&sobel_barrier);
@@ -84,6 +122,9 @@ void * threadedSobel(void * info)
  * -----------------------------------------------------------------------------*/
 void startSobel(VideoCapture v)
 {
+    if (pthread_mutex_init(&lock, NULL) != 0) { 
+        printf("\n mutex init has failed\n"); 
+    } 
     inMat = getFrame(v); /* get the initial frame */
     split4FromParent(inMat,splitMats); /* Separate the frame into four quads */
     setThreadOpt(); /*set the pthread options */
@@ -122,13 +163,14 @@ void startSobel(VideoCapture v)
      * filter again. */
     while((k=waitKey(1))!='q') 
     {
-	ttime = clock(); /* time how long it takes to get each sobel frame */
+	    ttime = clock(); /* time how long it takes to get each sobel frame */
         pthread_barrier_wait(&sobel_barrier); 
 	    /* wait for each thread to finish applying sobel filter */
-	/* Next 3 lines for getting timing information */
-	ttime = ((float)(clock()-ttime))/CLOCKS_PER_SEC;
-	cout << "time to sobel: " << ttime << "s" <<endl;
-	averageTime = approxRollingAverage(averageTime,ttime,numRounds++);
+	    /* Next 3 lines for getting timing information */
+
+	    ttime = ((float)(clock()-ttime))/CLOCKS_PER_SEC;
+	    cout << "time to sobel: " << ttime << "s" <<endl;
+	    averageTime = approxRollingAverage(averageTime,ttime,numRounds++);
         /* Now display the frame and give each thread a new frame */
         displayFrameMat(outFrame); /* Display sobel frame */
         inMat = getFrame(v); /* Get the next frame in the video */

@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <opencv2/opencv.hpp>
+
 #define NUMTHREADS 2
 #define ROUNDS 2
 using namespace std;
