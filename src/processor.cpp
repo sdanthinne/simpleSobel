@@ -35,13 +35,16 @@ using namespace cv;
 using namespace std;
 
 
-int8_t x_kernel[] = X_KERNEL;
-int8_t y_kernel[] = Y_KERNEL;
+int16_t x_kernel[] = X_KERNEL;
+int16_t y_kernel[] = Y_KERNEL;
 
 Mat threadFrame[DIVISOR];
 pthread_t thread[DIVISOR];
 pthread_mutex_t process_mutex = PTHREAD_MUTEX_INITIALIZER;
 Mat resultantMat;
+
+
+void grayScaleRowNEON(Pixel * start,uchar* grayPointer);
 
 /*-----------------------------------------------------------------------------
  * Function: matValMult
@@ -54,24 +57,22 @@ Mat resultantMat;
  * return: long: sum of the product of the two arrays
  *---------------------------------------------------------------------------*/
 
-int matValMult(int8_t array1[], int8_t array2[])
+int matValMult(int16_t array1[], int16_t array2[])
 {
     int resultant=0;
-    int8_t arrayR[9];
-    int8x16_t v1, v2;
-    v1 = vld1q_s8(array1);
-    v2 = vld1q_s8(array2);
-    v2 = vmulq_s8(v1,v2);
-    
-    //temp1 = vget_low_s8(vR);
-    //temp2 = vget_high_s8(vR);
-    //temp3 = vadd_s8(temp1,temp2);//after this we now have a 8x8 that has it added together
-    vst1q_s8(arrayR,v2);
+    int16_t arrayR[9];
+    int16x8_t v1, v2;
 
-    for(int i=0; i<KERNEL_SIZE;i++)
+    v1 = vld1q_s16(array1);
+    v2 = vld1q_s16(array2);
+    v1 = vmulq_s16(v1,v2);
+    vst1q_s16(arrayR,v1);
+
+    for(int i=0; i<KERNEL_SIZE-1;i++)
     {
         resultant += arrayR[i];
     }
+    resultant += array1[8]*array2[8];
     return resultant;
 }
 
@@ -91,7 +92,7 @@ int matValMult(int8_t array1[], int8_t array2[])
  * return: void:
  *---------------------------------------------------------------------------*/
 
-void populatePhotoKernel(int row, int col, Mat frame,int8_t * photoKernel)
+void populatePhotoKernel(int row, int col, Mat frame,int16_t * photoKernel)
 {
     for(int i=0;i<KERNEL_SIDE;i++)
     {
@@ -140,7 +141,7 @@ int clamp(long value,int min,int max)
 Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
 {
 
-    int8_t photoKernel[9];
+    int16_t photoKernel[9];
     for(int row=1;row<inFrame.rows-1;row++)
     {
         for(int col=1;col<inFrame.cols-1;col++)
@@ -180,16 +181,12 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
     {
         Pixel * row_ptr = inFrame.ptr<Pixel>(i);
         grayPointer = grayFrame.ptr<uchar>(i);
-
-        int counter=0;
-        for(int j=0; j<inFrame.cols;j++)
+        for(int j=0; j<inFrame.cols-1;j+=8)
         {
-            
-            float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
+            grayScaleRowNEON(&row_ptr[j],&grayPointer[j]);
+            //float newC = row_ptr[j].x*BLUE_CONSTANT + row_ptr[j].y*GREEN_CONSTANT + row_ptr[j].z*RED_CONSTANT;
                                 
-            grayPointer[j] =(uint8_t)newC;
-
-            //counter++;
+            //grayPointer[j] =(uint8_t)newC;
         }
 
     }
@@ -236,6 +233,73 @@ void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
     grayPointer[3] = vget_lane_u16(out,3);
 
     //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4
+    
+
+}
+
+/*-----------------------------------------------------------------------------
+ * Function: grayScaleRowNEON
+ * 
+ * Description: takes the next 4 values and grayscales them all at once
+ */
+void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
+{
+    //new integer operation
+    uint16x8_t rvF,gvF,bvF;
+    uint8x8x3_t vI;
+    #define RMUL 54
+    #define GMUL 183
+    #define BMUL 18
+    #define RGBDIVSHIFT 8
+
+    vI = vld3_u8((uint8_t *)(start));
+    rvF = vmovl_u8(vI.val[0]);//u16x8
+    rvF = vmulq_n_u16(rvF,RMUL);
+    rvF = vshrq_n_u16(rvF,RGBDIVSHIFT);
+
+    gvF = vmovl_u8(vI.val[1]);//u16x8
+    gvF = vmulq_n_u16(gvF,GMUL);
+    gvF = vshrq_n_u16(gvF,RGBDIVSHIFT);
+
+    bvF = vmovl_u8(vI.val[2]);//u16x8
+    bvF = vmulq_n_u16(bvF,BMUL);
+    bvF = vshrq_n_u16(bvF,RGBDIVSHIFT);
+
+    
+    rvF = vaddq_u16(rvF,gvF);
+    rvF = vaddq_u16(rvF,bvF);
+    
+    vst1_u8(grayPointer,vmovn_u16(rvF));
+    //old FP operation
+    /*uint8x8x3_t vI;
+
+    float32x4_t rvF,gvF,bvF;
+
+    vI = vld3_u8((uint8_t *)(start));
+
+    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[0]))));
+    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[1]))));
+    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[2]))));
+    //this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
+
+    //vF = vcvtq_f32_u32(vPF);
+    
+    rvF = vmulq_n_f32(rvF,RED_CONSTANT);
+    gvF = vmulq_n_f32(gvF,GREEN_CONSTANT);
+    bvF = vmulq_n_f32(bvF,BLUE_CONSTANT);
+
+    rvF = vaddq_f32(rvF,gvF);
+    rvF = vaddq_f32(rvF,bvF);
+
+    uint16x4_t out = vmovn_u32(vcvtq_u32_f32(rvF));//16x4
+    
+    //need a better solution than this
+    grayPointer[0] = vget_lane_u16(out,0);
+    grayPointer[1] = vget_lane_u16(out,1);
+    grayPointer[2] = vget_lane_u16(out,2);
+    grayPointer[3] = vget_lane_u16(out,3);
+
+    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4*/
     
 
 }
