@@ -15,4 +15,7 @@ pthread compatability
 executable will be named runMe
 
 ### Running Sobel
-> ./runme ./path/to/.avi
+> ./runMe
+> Two options
+> filename.avi
+> -v Run using the video at port 0

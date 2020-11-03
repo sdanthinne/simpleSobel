@@ -34,6 +34,7 @@
 using namespace cv;
 using namespace std;
 
+
 int16_t x_kernel[] = X_KERNEL;
 int16_t y_kernel[] = Y_KERNEL;
 
@@ -55,6 +56,7 @@ void grayScaleRowNEON(Pixel * start,uchar* grayPointer);
  *
  * return: long: sum of the product of the two arrays
  *---------------------------------------------------------------------------*/
+
 int matValMult(int16_t array1[], int16_t array2[])
 {
     int resultant=0;
@@ -89,6 +91,7 @@ int matValMult(int16_t array1[], int16_t array2[])
  *
  * return: void:
  *---------------------------------------------------------------------------*/
+
 void populatePhotoKernel(int row, int col, Mat frame,int16_t * photoKernel)
 {
     for(int i=0;i<KERNEL_SIDE;i++)
@@ -194,9 +197,11 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
                                 
             //grayPointer[j] =(uint8_t)newC;
         }
+
     }
     return grayFrame;
 }
+
 
 /*-----------------------------------------------------------------------------
  * Function: grayScaleRowNEON
