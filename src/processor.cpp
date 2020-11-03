@@ -19,9 +19,9 @@
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
 #define BLUE_CONSTANT 0.0722
-#define X_KERNEL {-1,0,1,-2,0,2,-1,0,1}
-#define Y_KERNEL {-1,-2,-1,0,0,0,1,2,1}
-#define KERNEL_SIZE 9
+#define X_KERNEL {-1,0,1,-2,2,-1,0,1}
+#define Y_KERNEL {-1,-2,-1,0,0,1,2,1}
+#define KERNEL_SIZE 8 
 #define KERNEL_SIDE 3
 #define L1_AREA_SIZE 100
 #define DIVISOR 4
@@ -58,7 +58,7 @@ void grayScaleRowNEON(Pixel * start,uchar* grayPointer);
 int matValMult(int16_t array1[], int16_t array2[])
 {
     int resultant=0;
-    int16_t arrayR[9];
+    int16_t arrayR[8];
     int16x8_t v1, v2;
 
     v1 = vld1q_s16(array1);
@@ -66,11 +66,11 @@ int matValMult(int16_t array1[], int16_t array2[])
     v1 = vmulq_s16(v1,v2);
     vst1q_s16(arrayR,v1);
 
-    for(int i=0; i<KERNEL_SIZE-1;i++)
+    for(int i=0; i<KERNEL_SIZE;i++)
     {
         resultant += arrayR[i];
     }
-    resultant += array1[8]*array2[8];
+    //resultant += array1[8]*array2[8];
     return resultant;
 }
 
@@ -97,10 +97,20 @@ void populatePhotoKernel(int row, int col, Mat frame,int16_t * photoKernel)
         uint8_t * selected = frame.ptr<uint8_t>(
                 row+i,
                 col);
-
-        photoKernel[i*3] = selected[0];
-        photoKernel[i*3+1] = selected[1];
-        photoKernel[i*3+2] = selected[2];
+	if( i == 1 ){
+        	photoKernel[i*3] = selected[0];
+        	photoKernel[i*3+1] = selected[2];
+	}
+	else if( i == 2){
+        	photoKernel[i*3-1] = selected[0];
+        	photoKernel[i*3] = selected[1];
+        	photoKernel[i*3+1] = selected[2];
+    	}
+	else{
+        	photoKernel[i*3] = selected[0];
+        	photoKernel[i*3+1] = selected[1];
+        	photoKernel[i*3+2] = selected[2];
+	}
     }
 }
 
@@ -137,7 +147,7 @@ int clamp(long value,int min,int max)
  *---------------------------------------------------------------------------*/
 Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
 {
-    int16_t photoKernel[9];
+    int16_t photoKernel[8];
     for(int row=1;row<inFrame.rows-1;row++)
     {
         for(int col=1;col<inFrame.cols-1;col++)
