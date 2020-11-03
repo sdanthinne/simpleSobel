@@ -201,49 +201,6 @@ Mat grayscaleFrame(Mat inFrame,Mat grayFrame)
  */
 void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
 {
-    float32x4_t constant;
-    uint8x8x3_t vI;
-
-    uint32x4_t vPF;
-    float32x4_t rvF,gvF,bvF;
-    //constant = vdupq_n_f32(rgbToGrayScale[i]);
-
-    vI = vld3_u8((uint8_t *)(start));
-
-    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u8(vmovl_u8(vI.val[0]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(red
-    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u8(vmovl_u8(vI.val[1]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(green
-    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u8(vmovl_u8(vI.val[2]))));//this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
-
-
-    //vF = vcvtq_f32_u32(vPF);
-    
-    rvF = vmulq_n_f32(rvF,RED_CONSTANT);
-    gvF = vmulq_n_f32(gvF,GREEN_CONSTANT);
-    bvF = vmulq_n_f32(bvF,BLUE_CONSTANT);
-
-    rvF = vaddq_f32(rvF,gvF);
-    rvF = vaddq_f32(rvF,bvF);
-
-    uint16x4_t out = vmovn_u32(vcvtq_u32_f32(rvF));//16x4
-    
-    //need a better solution than this
-    grayPointer[0] = vget_lane_u16(out,0);
-    grayPointer[1] = vget_lane_u16(out,1);
-    grayPointer[2] = vget_lane_u16(out,2);
-    grayPointer[3] = vget_lane_u16(out,3);
-
-    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4
-    
-
-}
-
-/*-----------------------------------------------------------------------------
- * Function: grayScaleRowNEON
- * 
- * Description: takes the next 4 values and grayscales them all at once
- */
-void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
-{
     //new integer operation
     uint16x8_t rvF,gvF,bvF;
     uint8x8x3_t vI;
