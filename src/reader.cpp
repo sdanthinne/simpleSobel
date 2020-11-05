@@ -44,5 +44,6 @@ Mat getFrame(VideoCapture video)
 {
    Mat m;
    video >> m; /* Get the next frame available */
+
    return m;
 }
