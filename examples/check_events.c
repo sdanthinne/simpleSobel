@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-#include <perfmon/err.h>
+//#include <perfmon/err.h>
 
 #include <perfmon/pfmlib.h>
 
@@ -63,8 +63,8 @@ main(int argc, const char **argv)
 	 * Initialize pfm library (required before we can use it)
 	 */
 	ret = pfm_initialize();
-	if (ret != PFM_SUCCESS)
-		errx(1, "cannot initialize library: %s\n", pfm_strerror(ret));
+	//if (ret != PFM_SUCCESS)
+	//	errx(1, "cannot initialize library: %s\n", pfm_strerror(ret));
 
 	memset(&pinfo, 0, sizeof(pinfo));
 	memset(&info, 0, sizeof(info));
@@ -104,8 +104,8 @@ main(int argc, const char **argv)
 		p = argv+1;
 	}
 
-	if (!*p)
-		errx(1, "you must pass at least one event");
+	//if (!*p)
+	//	errx(1, "you must pass at least one event");
 
 	memset(&e, 0, sizeof(e));
 	while(*p) {
@@ -132,17 +132,17 @@ main(int argc, const char **argv)
 				free(fqstr);
 				continue;
 			}
-			if (ret == PFM_ERR_NOTFOUND && strstr(*p, "::"))
-				errx(1, "%s: try setting LIBPFM_ENCODE_INACTIVE=1", pfm_strerror(ret));
-			errx(1, "cannot encode event %s: %s", *p, pfm_strerror(ret));
+			//if (ret == PFM_ERR_NOTFOUND && strstr(*p, "::"))
+			//	errx(1, "%s: try setting LIBPFM_ENCODE_INACTIVE=1", pfm_strerror(ret));
+			//errx(1, "cannot encode event %s: %s", *p, pfm_strerror(ret));
 		}
 		ret = pfm_get_event_info(e.idx, PFM_OS_NONE, &info);
-		if (ret != PFM_SUCCESS)
-			errx(1, "cannot get event info: %s", pfm_strerror(ret));
+		//if (ret != PFM_SUCCESS)
+		//	errx(1, "cannot get event info: %s", pfm_strerror(ret));
 
 		ret = pfm_get_pmu_info(info.pmu, &pinfo);
-		if (ret != PFM_SUCCESS)
-			errx(1, "cannot get PMU info: %s", pfm_strerror(ret));
+		//if (ret != PFM_SUCCESS)
+		//	errx(1, "cannot get PMU info: %s", pfm_strerror(ret));
 
 		printf("Requested Event: %s\n", *p);
 		printf("Actual    Event: %s\n", fqstr);
