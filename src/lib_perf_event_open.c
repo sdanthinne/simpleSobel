@@ -1,5 +1,9 @@
+
+#include "lib_perf_event_open.h"
 #include <sys/ioctl.h>
 #include <asm/unistd.h>
+#include <unistd.h>
+
 #include <sys/syscall.h>
 #include <asm/types.h>
 #include <linux/perf_event.h>
@@ -10,7 +14,7 @@
  * Serves as a wrapper for the syscall that is perf_event_open.
  * Taken from the perf_event_open man page
  */
-static long perf_event_open(struct perf_event_attr *hw_event, 
+static long _perf_event_open(struct perf_event_attr *hw_event, 
         pid_t pid, 
         int cpu, 
         int group_fd, 
@@ -34,7 +38,7 @@ void perf_start_count(__u32 type, int* fd)
     pe.disabled = 1;
     pe.exclude_kernel = 1;
     pe.exclude_hv = 1;
-    *fd = perf_event_open(&pe,0,-1,-1,0);
+    *fd = _perf_event_open(&pe,0,-1,-1,0);
     if(*fd==-1)
         errx(1,"error opening the perf event");
     ioctl(*fd,PERF_EVENT_IOC_RESET,0);
@@ -44,7 +48,7 @@ void perf_start_count(__u32 type, int* fd)
 /*
  * returns the result of the count, given the open FD.
  */
-long perf_end_count(int * fd)
+long long perf_end_count(int * fd)
 {
     //we will have to see how much the function call of this changes our result
     long long count;
