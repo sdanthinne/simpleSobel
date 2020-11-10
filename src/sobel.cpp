@@ -1,5 +1,5 @@
 /*******************************************************************************
- * File: soble.cpp
+ * File: sobel.cpp
  *
  * Description: This file contains the thread management and process launching. 
  *
@@ -10,9 +10,13 @@
 #include "processor.hpp"
 #include <pthread.h>
 #include <signal.h>
-#include <ctime>
+#include <time.h>
+#include <inttypes.h>
 #include <perfmon/pfmlib.h>
+#include <linux/perf_event.h>
+#include "lib_perf_event_open.hpp"
 
+#define HARDWARE_COUNT "PERF_COUNT_HW_INSTRUCTIONS"
 #define THREAD_COUNT 4
 
 using namespace cv;
@@ -40,7 +44,9 @@ double approxRollingAverage (double avg, double new_sample,int rnumRounds) {
 
 void intHandler(int n) /* print the average time when the program is exited */
 {
-    cout << "Average time for frame processing was: " << averageTime << endl;
+    cout << "Average time for frame processing was: " << averageTime << endl
+        << "Average frames/second was " << 1/(double)averageTime << endl;
+    
     exit(0);
 }
 
@@ -53,6 +59,18 @@ void setThreadOpt() /* Set to run the final function on exit */
     pthread_barrier_init(&sobel_barrier,NULL,THREAD_COUNT+1);
 }
 
+/*
+ * Function : _void_wrapper_sobel
+ * Description: Used as a wrapper to count the cycles in this function
+ *  Unsure of the overhead created
+ */
+void _void_wrapper_sobel(int tid)
+{
+    sobelFrame(splitMats[tid],
+        outSplitMats[tid],
+        graySplitMats[tid]);
+}
+
 /*------------------------------------------------------------------------------
  * Function: threadedSobel
  * Description: Giving each thread their portion of the frame to process. This
@@ -63,7 +81,11 @@ void * threadedSobel(void * info)
 {
 
     pfm_pmu_encode_arg_t raw;
+    char * fstr = NULL;
     memset(&raw,0,sizeof(raw));
+    raw.fstr = &fstr;
+    long long count;
+    int fd;
 
     if(pfm_initialize()!=PFM_SUCCESS)
     {
@@ -71,37 +93,22 @@ void * threadedSobel(void * info)
         cout << "init PFM failed" << endl;
         pthread_mutex_unlock(&lock); 
     }
-     
-
 
    while(k!='q')
    {
-        //int thread_info = pfm_get_event_attr_info(int idx, int attr, PFM_OS_PERF_EVENT, &info);
-
-
-        int ret = pfm_get_os_event_encoding("CPU_CYCLES",PFM_PLM0,PFM_OS_NONE,&raw);
-        if(ret != PFM_SUCCESS)
-        {
-            cout<< "bad event get" << endl;
-        }
-        uint64_t cycles = raw.codes[0];
 
         int thread_num =  *((int *)info);
-
+        //perf_start_count(PERF_COUNT_HW_INSTRUCTIONS,&fd);
+        perf_start_count(PERF_COUNT_HW_BRANCH_MISSES,&fd);
         sobelFrame(splitMats[thread_num],
                 outSplitMats[thread_num],
                 graySplitMats[thread_num]);
+                
+        count = perf_end_count(&fd);
 
         memset(&raw,0,sizeof(raw));
-        ret = pfm_get_os_event_encoding("CPU_CYCLES",PFM_PLM0,PFM_OS_NONE,&raw);
-        if(ret != PFM_SUCCESS)
-        {
-            cout<< "bad event get" << endl;
-        }
-        cycles = raw.codes[0] - cycles;
-
         pthread_mutex_lock(&lock);
-        cout << "number of cycles for quadrant: " << cycles << endl;
+        cout << "CYCLES: " << count << endl;
         pthread_mutex_unlock(&lock);
 
         pthread_barrier_wait(&sobel_barrier);
@@ -131,7 +138,7 @@ void startSobel(VideoCapture v)
     k=0;//input key
     
     /* Next 3 lines are for determining timing */
-    double ttime = 0;
+    time_t stime,etime;
     averageTime = 40;
     numRounds = 1;
 
@@ -163,14 +170,14 @@ void startSobel(VideoCapture v)
      * filter again. */
     while((k=waitKey(1))!='q') 
     {
-	    ttime = clock(); /* time how long it takes to get each sobel frame */
+	    stime = time(NULL); /* time how long it takes to get each sobel frame */
         pthread_barrier_wait(&sobel_barrier); 
 	    /* wait for each thread to finish applying sobel filter */
 	    /* Next 3 lines for getting timing information */
 
-	    ttime = ((float)(clock()-ttime))/CLOCKS_PER_SEC;
-	    cout << "time to sobel: " << ttime << "s" <<endl;
-	    averageTime = approxRollingAverage(averageTime,ttime,numRounds++);
+	    etime = time(NULL);
+	    //cout << "time to sobel: " << difftime(etime,stime) << "s" <<endl;
+	    averageTime = approxRollingAverage(averageTime,difftime(etime,stime),numRounds++);
         /* Now display the frame and give each thread a new frame */
         displayFrameMat(outFrame); /* Display sobel frame */
         inMat = getFrame(v); /* Get the next frame in the video */

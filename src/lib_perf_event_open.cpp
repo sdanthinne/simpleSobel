@@ -1,5 +1,5 @@
 
-#include "lib_perf_event_open.h"
+#include "lib_perf_event_open.hpp"
 #include <sys/ioctl.h>
 #include <asm/unistd.h>
 #include <unistd.h>
