@@ -33,6 +33,7 @@ Mat graySplitMats[4];
 pthread_barrier_t sobel_barrier;
 pthread_t threads[THREAD_COUNT];
 double averageTime;
+long long averageCycles[4], averageMisses[4];
 int numRounds;
 pthread_mutex_t lock; 
 /* Calculate the average time to compute sobel filter */
@@ -46,6 +47,11 @@ void intHandler(int n) /* print the average time when the program is exited */
 {
     cout << "Average time for frame processing was: " << averageTime << endl
         << "Average frames/second was " << 1/(double)averageTime << endl;
+    for(int i=0;i<4;i++)
+    {
+        cout << " average misses for core " << i << ": " << averageMisses[i] << endl;
+        cout << " average cycles for core " << i << ": " << averageCycles[i] << endl;
+    }
     
     exit(0);
 }
@@ -84,8 +90,10 @@ void * threadedSobel(void * info)
     char * fstr = NULL;
     memset(&raw,0,sizeof(raw));
     raw.fstr = &fstr;
-    long long count;
-    int fd;
+    long long count_cycles,count_misses;
+    int fd[2];
+    memset(&averageMisses,0,sizeof(averageMisses));
+    memset(&averageCycles,0,sizeof(averageCycles));
 
     if(pfm_initialize()!=PFM_SUCCESS)
     {
@@ -98,18 +106,22 @@ void * threadedSobel(void * info)
    {
 
         int thread_num =  *((int *)info);
-        //perf_start_count(PERF_COUNT_HW_INSTRUCTIONS,&fd);
-        perf_start_count(PERF_COUNT_HW_BRANCH_MISSES,&fd);
+        perf_start_count(PERF_COUNT_HW_BRANCH_MISSES,&fd[0]);
+        perf_start_count(PERF_COUNT_HW_CPU_CYCLES,&fd[1]);
         sobelFrame(splitMats[thread_num],
                 outSplitMats[thread_num],
                 graySplitMats[thread_num]);
                 
-        count = perf_end_count(&fd);
+        count_cycles = perf_end_count(&fd[1]);
+        count_misses = perf_end_count(&fd[0]);
+        
+        averageMisses[thread_num] = approxRollingAverage(averageMisses[thread_num],count_misses,numRounds);
+        averageCycles[thread_num] = approxRollingAverage(averageCycles[thread_num],count_cycles,numRounds);
+
 
         memset(&raw,0,sizeof(raw));
-        pthread_mutex_lock(&lock);
-        cout << "CYCLES: " << count << endl;
-        pthread_mutex_unlock(&lock);
+        //pthread_mutex_lock(&lock);
+        //pthread_mutex_unlock(&lock);
 
         pthread_barrier_wait(&sobel_barrier);
 	    /* wait for every thread to finish processing */
