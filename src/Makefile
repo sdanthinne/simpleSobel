@@ -30,6 +30,7 @@ debug:
 .PHONY: perf
 perf:
 		$(CC) -c $(CCFLAGS) -pg $(SOURCES)
+		`mv *.o ../obj/.`
 		$(CC) -o $(TARGET) $(OBJECTS) $(LDFLAGS) -pg $(INCLUDES)
 		./$(TARGET) $(args)
 		gprof $(TARGET) > $(TARGET).output

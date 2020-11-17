@@ -60,15 +60,18 @@ void grayScaleRowNEON(Pixel * start,uchar* grayPointer);
 int matValMult(int16_t array1[], int16_t array2[])
 {
     int resultant=0;
-    int16_t arrayR[8];
+    int32_t arrayR[2];
     int16x8_t v1, v2;
+    int32x4_t sum;
 
     v1 = vld1q_s16(array1);
     v2 = vld1q_s16(array2);
     v1 = vmulq_s16(v1,v2);
-    vst1q_s16(arrayR,v1);
+    //vst1q_s16(arrayR,v1);
+    sum = vmovl_s16(vadd_s16(vget_low_s16(v1),vget_high_s16(v1)));
+    vst1_s32(arrayR,vadd_s32(vget_high_s32(sum),vget_low_s32(sum)));
 
-    for(int i=0; i<KERNEL_SIZE;i++)
+    for(int i=0; i<2;i++)
     {
         resultant += arrayR[i];
     }
