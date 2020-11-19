@@ -15,6 +15,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <arm_neon.h>
+#include <stdlib.h>
 
 #define RED_CONSTANT 0.2126
 #define GREEN_CONSTANT 0.7152 
@@ -29,6 +30,9 @@
 //a vector magnitude approximation based on the max and min vector lengths. 
 #define VEC_MAG(A,B)\
     ((A) > (B)) ? 15*((A) + ((B)>>1))/16 : 15*((B) + ((A)>>1))/16
+
+#define VEC_MAG_ADD(A,B)\
+    ((A) + (B))
 
 
 using namespace cv;
@@ -70,11 +74,11 @@ int matValMult(int16_t array1[], int16_t array2[])
     //vst1q_s16(arrayR,v1);
     sum = vmovl_s16(vadd_s16(vget_low_s16(v1),vget_high_s16(v1)));
     vst1_s32(arrayR,vadd_s32(vget_high_s32(sum),vget_low_s32(sum)));
-
-    for(int i=0; i<2;i++)
-    {
-        resultant += arrayR[i];
-    }
+    resultant = arrayR[0] + arrayR[1];
+    //for(int i=0; i<2;i++)
+    //{
+    //    resultant += arrayR[i];
+    //}
     //resultant += array1[8]*array2[8];
     return resultant;
 }
@@ -136,7 +140,7 @@ int clamp(long value,int min,int max)
 {
     return (value>max)? max : (value < min) ? min : value;
 }
-
+#define _CLAMP(value, min, max) ((value>max)? max : (value < min) ? min : value)
 
 /*-----------------------------------------------------------------------------
  * Function: sobelFrameFromGrayScale
@@ -163,8 +167,11 @@ Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
             uint8_t * current = (outFrame).ptr<uint8_t>(row,col);
             *current = 
                 clamp(
-                    VEC_MAG(
-                    matValMult(photoKernel,x_kernel),matValMult(photoKernel,y_kernel)),0,UCHAR_MAX);
+                    VEC_MAG_ADD(
+                        (matValMult(photoKernel,x_kernel)),
+                        (matValMult(photoKernel,y_kernel))),
+                    0,
+                    UCHAR_MAX);
            
 
         }
