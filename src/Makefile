@@ -1,6 +1,6 @@
 TARGET   = runMe
-CC       = g++
-CCFLAGS  =  -Wall -O0 `pkg-config --cflags opencv` -lpthread -mfpu=neon -mcpu=Cortex-A8 -ffast-math -ggdb
+CC       = g++-10.1
+CCFLAGS  =  -Wall -O3 `pkg-config --cflags opencv` -lpthread -mfpu=neon -mcpu=Cortex-A53 -ffast-math -ggdb
 LDFLAGS  = -lm `pkg-config  --libs --cflags opencv` -lpthread -lpfm -ggdb
 
 SOURCES  = $(wildcard *.cpp)
