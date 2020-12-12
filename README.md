@@ -1,16 +1,19 @@
 # Threaded Sobel Edge Detection
-this project is a simple sobel filter, with optimizations to run on the raspberry pi 3 B+.
+This codebase represents a sobel kernel multiplicatoin tool, with many optimizations to run on the raspberry pi 3 B+.
+These optimizations include:
+-multi-threading
+-ARM NEON
+-memory use reduction using hardware counters
+-compiler optimization
 
-### To Build:
+### Dependencies:
+-make
+-gcc
+-pkg-config
+-opencv4
+-pthread compatability
 
-#### Dependencies:
-make
-gcc
-pkg-config
-opencv4
-pthread compatability
-
-#### Building:
+### Building:
 `make` to build on your own system 
 executable will be named runMe
 
