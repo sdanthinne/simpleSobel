@@ -184,8 +184,8 @@ Mat sobelReference(Mat inFrame, Mat outFrame)
     cvtColor(inFrame,grayFrame,COLOR_BGR2GRAY);
     Mat grad_x, grad_y;
     Mat abs_grad_x, abs_grad_y;
-    Sobel(grayFrame, grad_x, CV_8S, 1, 0, 3,1, 0, BORDER_DEFAULT);
-    Sobel(grayFrame, grad_y, CV_8S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+    Sobel(grayFrame, grad_x, CV_16S, 1, 0, 3,1, 0, BORDER_DEFAULT);
+    Sobel(grayFrame, grad_y, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
     // converting back to CV_8U
     convertScaleAbs(grad_x, abs_grad_x);
     convertScaleAbs(grad_y, abs_grad_y);
