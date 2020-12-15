@@ -18,6 +18,8 @@
 
 #define HARDWARE_COUNT "PERF_COUNT_HW_INSTRUCTIONS"
 #define THREAD_COUNT 4
+#define CACHE_SIZE 32000
+#define CACHE_SIDE 175
 
 using namespace cv;
 using namespace std;
@@ -130,6 +132,17 @@ void * threadedSobel(void * info)
    }
 }
 
+void startReferenceSobel(VideoCapture v)
+{
+    Mat inMat;
+    Mat outMat;
+    while(waitKey(1)!='q')
+    {   
+        inMat = getFrame(v);
+        outMat = sobelReference(inMat,outMat);
+        displayFrameMat(outMat);
+    }
+}
 /*------------------------------------------------------------------------------
  * Function: startSobel
  * Description: startSoble initializes the Mat objects, splits them all into

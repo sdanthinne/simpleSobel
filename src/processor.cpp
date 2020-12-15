@@ -171,7 +171,27 @@ Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
     }
     return outFrame;
 }
-
+/*
+ * Function: sobelReference
+ *
+ * Description: a reference sobel applicator using the opencv implementation
+ *
+ *
+ */
+Mat sobelReference(Mat inFrame, Mat outFrame)
+{
+    Mat grayFrame;
+    cvtColor(inFrame,grayFrame,COLOR_BGR2GRAY);
+    Mat grad_x, grad_y;
+    Mat abs_grad_x, abs_grad_y;
+    Sobel(grayFrame, grad_x, CV_8S, 1, 0, 3,1, 0, BORDER_DEFAULT);
+    Sobel(grayFrame, grad_y, CV_8S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+    // converting back to CV_8U
+    convertScaleAbs(grad_x, abs_grad_x);
+    convertScaleAbs(grad_y, abs_grad_y);
+    addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, outFrame);
+    return outFrame;
+}
 
 /*-----------------------------------------------------------------------------
  * Function: grayscaleFrame
@@ -239,38 +259,6 @@ void grayScaleRowNEON(Pixel * start,uchar* grayPointer)
     rvF = vaddq_u16(rvF,bvF);
     
     vst1_u8(grayPointer,vmovn_u16(rvF));
-    //old FP operation
-    /*uint8x8x3_t vI;
-
-    float32x4_t rvF,gvF,bvF;
-
-    vI = vld3_u8((uint8_t *)(start));
-
-    rvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[0]))));
-    gvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[1]))));
-    bvF = vcvtq_f32_u32(vmovl_u16(vget_low_u16(vmovl_u8(vI.val[2]))));
-    //this gets the lower 4 values in a 16x4, then moves it to a 32x4(blue
-
-    //vF = vcvtq_f32_u32(vPF);
-    
-    rvF = vmulq_n_f32(rvF,RED_CONSTANT);
-    gvF = vmulq_n_f32(gvF,GREEN_CONSTANT);
-    bvF = vmulq_n_f32(bvF,BLUE_CONSTANT);
-
-    rvF = vaddq_f32(rvF,gvF);
-    rvF = vaddq_f32(rvF,bvF);
-
-    uint16x4_t out = vmovn_u32(vcvtq_u32_f32(rvF));//16x4
-    
-    //need a better solution than this
-    grayPointer[0] = vget_lane_u16(out,0);
-    grayPointer[1] = vget_lane_u16(out,1);
-    grayPointer[2] = vget_lane_u16(out,2);
-    grayPointer[3] = vget_lane_u16(out,3);
-
-    //vst1q_u8(grayPointer,vmovn_u16(  vmovn_u32(vcvtq_u32_f32(rvF))));//16x4*/
-    
-
 }
 
 /*-----------------------------------------------------------------------------
@@ -315,5 +303,17 @@ Mat * split4FromParent(Mat parent,Mat * matCollection)
     matCollection[2] = parent(Range(rowSize-1,parent.rows),Range(0,colSize+1));
     matCollection[3] = parent(Range(rowSize-1,parent.rows),Range(colSize-1,parent.cols));
     return matCollection;
-
 }
+/*
+ * Function: splitFromParentSize
+ * 
+ * Description: splits a parent frame into the greatest divisible number of frames 
+ *  less than the size provided. Each selection has a one pixel overlap with the next.
+ */
+/*Mat * splitFromParentSize(Mat parent, int maxSize, Mat * matCollection)
+{
+    size_t elementSize = parent.elemSize();
+    int cols = parent.cols, rows = parent.rows;
+
+
+}*/

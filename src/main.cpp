@@ -13,34 +13,60 @@ int main(int argc, char** argv)
 {
     char * videoTitle;
     cv::VideoCapture video;
-    if(argc == 2)
+    
+    int flags=0,opt;
+    while((opt = getopt(argc, argv,"rvf:h"))!=-1)
     {
-        int titleLength = strlen(argv[1]);
-        videoTitle = argv[1];
-        if(strcmp(argv[1],"-v")==0)
+        switch(opt)
         {
-            cout << "using Video feed 0" << endl;
-            video.open(0);
+            case 'r':
+                cout << "Using reference" << endl;
+                flags |= 1;
+                break;
+            case 'v':
+                flags |= 2;
+                break;
+            case 'f':
+                flags |= 4;
+                videoTitle = optarg;
+                break;
+            case 'h':
+                cout << "Usage: [executable] -[r(v|f:)] [f:filename]" << endl;
+                return 0;
+                break;
+            default:
+                break;
         }
-        else if(strcmp((videoTitle+titleLength-4),".avi")!=0)
-        {
-            cout << "invalid option type" << endl;
-            return 1;
-        }else if(access(videoTitle,F_OK)==-1)
-        {
-            cout << "that file does not exist" << endl;
-            return 1;
-        }else 
-        {
-            video.open(videoTitle);
-        }
-    }else
-    {
-        return 1;
     }
+    /*if((flags&~(4+2))==0)
+    {
+        cout << "incorrect argument configuration"<< endl;
+        return 1;
+    }*/
+    if(flags&4)
+    {
+        if(access(videoTitle,F_OK)==-1)
+        {
+            cout << "nonexistant file" << endl;
+        }
+        video.open(videoTitle);
+
+    }
+    if(flags&2)
+    {
+        cout << "using video feed 0" << endl;
+        video.open(0);
+    }
+    
     if(video.isOpened())
     {
-        startSobel(video);
+        if(flags&1)
+        {
+            startReferenceSobel(video);
+        }else
+        {
+           startSobel(video);
+        }
     }
     return 0;
 }
