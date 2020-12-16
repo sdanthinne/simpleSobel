@@ -136,10 +136,24 @@ void startReferenceSobel(VideoCapture v)
 {
     Mat inMat;
     Mat outMat;
+    long long count_cycles,count_misses;
+    int fd[2];
+    signal(SIGINT,intHandler);
     while(waitKey(1)!='q')
     {   
         inMat = getFrame(v);
+        perf_start_count(PERF_COUNT_HW_BRANCH_MISSES,&fd[0]);
+        perf_start_count(PERF_COUNT_HW_CPU_CYCLES,&fd[1]);
+
         outMat = sobelReference(inMat,outMat);
+
+        count_cycles = perf_end_count(&fd[1]);
+        count_misses = perf_end_count(&fd[0]);
+        
+        averageMisses[0] = approxRollingAverage(averageMisses[0],count_misses,numRounds);
+        averageCycles[0] = approxRollingAverage(averageCycles[0],count_cycles,numRounds);
+        numRounds++;
+
         displayFrameMat(outMat);
     }
 }

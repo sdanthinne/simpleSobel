@@ -1,4 +1,4 @@
-TARGET   = runMe
+TARGET   = sobel
 CC       = g++-10.1
 CCFLAGS  =  -Wall -O3 `pkg-config --cflags opencv` -lpthread -mfpu=neon -mcpu=Cortex-A53 -ffast-math -ggdb
 LDFLAGS  = -lm `pkg-config  --libs --cflags opencv` -lpthread -lpfm -ggdb
