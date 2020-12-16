@@ -67,17 +67,7 @@ void setThreadOpt() /* Set to run the final function on exit */
     pthread_barrier_init(&sobel_barrier,NULL,THREAD_COUNT+1);
 }
 
-/*
- * Function : _void_wrapper_sobel
- * Description: Used as a wrapper to count the cycles in this function
- *  Unsure of the overhead created
- */
-void _void_wrapper_sobel(int tid)
-{
-    sobelFrame(splitMats[tid],
-        outSplitMats[tid],
-        graySplitMats[tid]);
-}
+
 
 /*------------------------------------------------------------------------------
  * Function: threadedSobel
@@ -87,22 +77,10 @@ void _void_wrapper_sobel(int tid)
  * -----------------------------------------------------------------------------*/
 void * threadedSobel(void * info)
 {
-
-    pfm_pmu_encode_arg_t raw;
-    char * fstr = NULL;
-    memset(&raw,0,sizeof(raw));
-    raw.fstr = &fstr;
     long long count_cycles,count_misses;
     int fd[2];
     memset(&averageMisses,0,sizeof(averageMisses));
     memset(&averageCycles,0,sizeof(averageCycles));
-
-    if(pfm_initialize()!=PFM_SUCCESS)
-    {
-        pthread_mutex_lock(&lock);
-        cout << "init PFM failed" << endl;
-        pthread_mutex_unlock(&lock); 
-    }
 
    while(k!='q')
    {
@@ -121,7 +99,6 @@ void * threadedSobel(void * info)
         averageCycles[thread_num] = approxRollingAverage(averageCycles[thread_num],count_cycles,numRounds);
 
 
-        memset(&raw,0,sizeof(raw));
         //pthread_mutex_lock(&lock);
         //pthread_mutex_unlock(&lock);
 
@@ -139,16 +116,22 @@ void startReferenceSobel(VideoCapture v)
     long long count_cycles,count_misses;
     int fd[2];
     signal(SIGINT,intHandler);
+
+    time_t stime,etime;
     while(waitKey(1)!='q')
     {   
         inMat = getFrame(v);
+        stime = time(NULL); 
         perf_start_count(PERF_COUNT_HW_BRANCH_MISSES,&fd[0]);
         perf_start_count(PERF_COUNT_HW_CPU_CYCLES,&fd[1]);
 
         outMat = sobelReference(inMat,outMat);
 
+
         count_cycles = perf_end_count(&fd[1]);
         count_misses = perf_end_count(&fd[0]);
+        etime = time(NULL);
+	    averageTime = approxRollingAverage(averageTime,difftime(etime,stime),numRounds++);
         
         averageMisses[0] = approxRollingAverage(averageMisses[0],count_misses,numRounds);
         averageCycles[0] = approxRollingAverage(averageCycles[0],count_cycles,numRounds);
