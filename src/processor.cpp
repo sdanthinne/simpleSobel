@@ -171,6 +171,33 @@ Mat sobelFrameFromGrayScale(Mat inFrame,Mat outFrame)
     }
     return outFrame;
 }
+
+Mat grayscaleFrameOptimalThread(Mat inFrame, Mat outFrame, DimRef dim)
+{
+
+    for(int row = dim.starty; row<dim.endy;row++)//for each row
+    {
+        int col;
+        Pixel * inRowPtr = inFrame.ptr<Pixel>(row);
+        uchar * outRowPtr = outFrame.ptr<uchar>(row);
+        for(col = dim.startx; col < dim.endx;col+=4)//possible segfault
+        {
+
+            grayScaleRowNeon(&inRowPtr[col],&outRowPtr[col]);
+        }
+    }
+    grayScaleRowNeon(Pixel *, outFrame ptr);
+}
+
+//computes a sobel filter based purely on reference - no more 
+
+Mat sobelFrameOptimalThread(Mat inFrame, Mat outFrame,DimRef dim)
+{
+        //first we need to grayscale
+        outFrame  = grayscaleFrameOptimalThread(inFrame, outFrame, dim);
+}
+
+
 /*
  * Function: sobelReference
  *
