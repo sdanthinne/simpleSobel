@@ -1,5 +1,5 @@
 # Threaded Sobel Edge Detection
-This codebase represents a sobel kernel multiplicatoin tool, with many optimizations to run on the raspberry pi 3 B+.
+This codebase represents a sobel kernel multiplication tool, with many optimizations to run on the raspberry pi 3 B+.
 These optimizations include:
 - multi-threading
 - ARM NEON
